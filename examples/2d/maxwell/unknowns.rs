@@ -1,17 +1,19 @@
+extern crate galerkin;
 extern crate rulinalg;
 
-use distmesh::distmesh_2d::ellipse;
-use galerkin_2d::galerkin::GalerkinScheme;
-use galerkin_2d::grid::{assemble_grid, ElementStorage, Grid};
-use galerkin_2d::operators::FaceLift;
-use galerkin_2d::operators::FaceLiftable;
-use galerkin_2d::operators::{assemble_operators, Operators};
-use galerkin_2d::reference_element::ReferenceElement;
-use galerkin_2d::unknowns::Unknown;
+use galerkin::distmesh::distmesh_2d::ellipse;
+use galerkin::galerkin_2d::galerkin::GalerkinScheme;
+use galerkin::galerkin_2d::grid::{assemble_grid, ElementStorage, Grid};
+use galerkin::galerkin_2d::operators::FaceLift;
+use galerkin::galerkin_2d::operators::FaceLiftable;
+use galerkin::galerkin_2d::operators::{assemble_operators, Operators};
+use galerkin::galerkin_2d::reference_element::ReferenceElement;
+use galerkin::galerkin_2d::unknowns::Unknown;
 use rulinalg::vector::Vector;
 use std::ops::{Add, Div, Mul, Neg, Sub};
 use std::fmt;
 
+#[allow(non_snake_case)]
 #[derive(Debug, Clone, Copy)]
 pub struct EHUnit {
     pub Ez: f64,
@@ -19,6 +21,7 @@ pub struct EHUnit {
     pub Hy: f64,
 }
 
+#[allow(non_snake_case)]
 #[derive(Debug)]
 pub struct EH {
     pub Ez: Vector<f64>,

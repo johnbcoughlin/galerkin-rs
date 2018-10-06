@@ -1,10 +1,13 @@
-use galerkin_2d::flux::{FluxKey, FluxScheme, NumericalFlux, Side};
-use galerkin_2d::grid::SpatialVariable;
-use galerkin_2d::grid::Vec2;
-use galerkin_2d::maxwell::unknowns::*;
-use galerkin_2d::reference_element::ReferenceElement;
-use galerkin_2d::unknowns::Unknown;
+extern crate galerkin;
+extern crate rulinalg;
+
+use galerkin::galerkin_2d::flux::{FluxKey, FluxScheme, NumericalFlux, Side};
+use galerkin::galerkin_2d::grid::SpatialVariable;
+use galerkin::galerkin_2d::grid::Vec2;
+use galerkin::galerkin_2d::reference_element::ReferenceElement;
+use galerkin::galerkin_2d::unknowns::Unknown;
 use rulinalg::vector::Vector;
+use unknowns::{EH};
 
 #[derive(Copy, Clone)]
 pub struct Permittivity {
@@ -21,31 +24,34 @@ impl Permittivity {
     }
 }
 
-impl SpatialVariable for () {
-    type Line = ();
+#[derive(Debug, Clone, Copy)]
+pub struct Null();
 
-    fn edge_1(&self, reference_element: &ReferenceElement) -> () {
-        ()
+impl SpatialVariable for Null {
+    type Line = Null;
+
+    fn edge_1(&self, _reference_element: &ReferenceElement) -> Null {
+        Null()
     }
 
-    fn edge_2(&self, reference_element: &ReferenceElement) -> () {
-        ()
+    fn edge_2(&self, _reference_element: &ReferenceElement) -> Null {
+        Null()
     }
 
-    fn edge_3(&self, reference_element: &ReferenceElement) -> () {
-        ()
+    fn edge_3(&self, _reference_element: &ReferenceElement) -> Null {
+        Null()
     }
 
-    fn face1_zero(reference_element: &ReferenceElement) -> () {
-        ()
+    fn face1_zero(_reference_element: &ReferenceElement) -> Null {
+        Null()
     }
 
-    fn face2_zero(reference_element: &ReferenceElement) -> () {
-        ()
+    fn face2_zero(_reference_element: &ReferenceElement) -> Null {
+        Null()
     }
 
-    fn face3_zero(reference_element: &ReferenceElement) -> () {
-        ()
+    fn face3_zero(_reference_element: &ReferenceElement) -> Null {
+        Null()
     }
 }
 
@@ -62,8 +68,8 @@ pub struct Vacuum {}
 
 impl Vacuum {
     fn interior_flux(
-        minus: Side<EH, ()>,
-        plus: Side<EH, ()>,
+        minus: Side<EH, Null>,
+        plus: Side<EH, Null>,
         outward_normal: &Vec<Vec2>,
     ) -> EH {
         let d_eh = minus.u - plus.u;
@@ -72,8 +78,8 @@ impl Vacuum {
     }
 
     fn exterior_flux(
-        minus: Side<EH, ()>,
-        plus: Side<EH, ()>,
+        minus: Side<EH, Null>,
+        plus: Side<EH, Null>,
         outward_normal: &Vec<Vec2>,
     ) -> EH {
         let d_hx = Vector::zeros(minus.u.Hx.size());
@@ -110,13 +116,13 @@ impl Vacuum {
 impl FluxScheme<EH> for Vacuum {
     // In the vacuum, we can normalize all constants to 1, and there is no spatial variation
     // of the permittivity, so the spatial variable is ().
-    type F = ();
+    type F = Null;
     type K = MaxwellFluxType;
 
     fn flux_type(
         key: Self::K,
-        minus: Side<EH, ()>,
-        plus: Side<EH, ()>,
+        minus: Side<EH, Null>,
+        plus: Side<EH, Null>,
         outward_normal: &Vec<Vec2>,
     ) -> EH {
         match key {

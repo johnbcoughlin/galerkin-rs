@@ -1,25 +1,33 @@
+extern crate galerkin;
 extern crate rulinalg;
 
+mod flux;
+mod unknowns;
+
 use std::f64::consts;
-use distmesh::distmesh_2d::unit_square;
-use galerkin_2d::flux::compute_flux;
-use galerkin_2d::galerkin::GalerkinScheme;
-use galerkin_2d::grid::Element;
-use galerkin_2d::grid::{assemble_grid, Grid, SpatialVariable};
-use galerkin_2d::maxwell::flux::*;
-use galerkin_2d::maxwell::unknowns::*;
-use galerkin_2d::operators::curl_2d;
-use galerkin_2d::operators::grad;
-use galerkin_2d::operators::{assemble_operators, Operators};
-use galerkin_2d::reference_element::ReferenceElement;
-use galerkin_2d::unknowns::{communicate, initialize_storage, Unknown};
+use galerkin::distmesh::distmesh_2d::unit_square;
+use galerkin::galerkin_2d::flux::compute_flux;
+use galerkin::galerkin_2d::galerkin::GalerkinScheme;
+use galerkin::galerkin_2d::grid::Element;
+use galerkin::galerkin_2d::grid::{assemble_grid, Grid, SpatialVariable};
+use flux::*;
+use unknowns::*;
+use galerkin::galerkin_2d::operators::curl_2d;
+use galerkin::galerkin_2d::operators::grad;
+use galerkin::galerkin_2d::operators::{assemble_operators, Operators};
+use galerkin::galerkin_2d::reference_element::ReferenceElement;
+use galerkin::galerkin_2d::unknowns::{communicate, initialize_storage, Unknown};
 use rulinalg::vector::Vector;
 use std::iter::repeat_with;
-use galerkin_2d::grid::ElementStorage;
-use galerkin_2d::operators::FaceLiftable;
-use functions::range_kutta::RKA;
-use functions::range_kutta::RKB;
-use plot::plot3d::{Plotter3D, GnuplotPlotter3D};
+use galerkin::galerkin_2d::grid::ElementStorage;
+use galerkin::galerkin_2d::operators::FaceLiftable;
+use galerkin::functions::range_kutta::RKA;
+use galerkin::functions::range_kutta::RKB;
+use galerkin::plot::plot3d::{Plotter3D, GnuplotPlotter3D};
+
+fn main() {
+    maxwell_2d_example();
+}
 
 #[derive(Debug)]
 pub struct Maxwell2D {
@@ -98,6 +106,7 @@ pub fn maxwell_2d<'grid, Fx>(
     }
 }
 
+#[allow(non_snake_case)]
 fn maxwell_rhs_2d<'grid>(
     elt: &EHElement<'grid>,
     elt_storage: &ElementStorage<Maxwell2D>,
@@ -155,8 +164,8 @@ pub fn maxwell_2d_example() {
         &operators,
         &mesh,
         &boundary_condition,
-        &|| (),
-        |_, _| (),
+        &|| Null(),
+        |_, _| Null(),
         MaxwellFluxType::Interior,
         MaxwellFluxType::Exterior,
     );
@@ -165,6 +174,7 @@ pub fn maxwell_2d_example() {
     maxwell_2d(&grid, &reference_element, &operators, &exact_cavity_solution_eh0);
 }
 
+#[allow(non_snake_case)]
 fn exact_cavity_solution_eh0(xs: &Vector<f64>, ys: &Vector<f64>) -> EH {
     let pi = consts::PI;
     let omega = pi * consts::SQRT_2;

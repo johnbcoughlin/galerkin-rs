@@ -1,8 +1,6 @@
-mod flux;
-mod galerkin;
-mod grid;
-mod operators;
-mod reference_element;
-mod unknowns;
-
-pub mod maxwell;
+pub mod flux;
+pub mod galerkin;
+pub mod grid;
+pub mod operators;
+pub mod reference_element;
+pub mod unknowns;
