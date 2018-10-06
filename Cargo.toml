@@ -38,5 +38,9 @@ name = "galerkin"
 path = "src/lib.rs"
 
 [[bin]]
-name = "advec1d"
+name = "advec-1d"
 path = "examples/1d/advec.rs"
+
+[[bin]]
+name = "maxwell-1d"
+path = "examples/1d/maxwell.rs"

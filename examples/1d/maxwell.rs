@@ -1,30 +1,34 @@
-extern crate core;
+extern crate galerkin;
+#[macro_use]
 extern crate rulinalg;
 
-use self::core::ops::{Add, Div, Mul, Neg};
-use functions::range_kutta::{RKA, RKB, RKC};
-use galerkin_1d::flux::FluxEnum;
-use galerkin_1d::flux::FluxScheme;
-use galerkin_1d::flux::NumericalFlux;
-use galerkin_1d::flux::Side;
-use galerkin_1d::galerkin::compute_flux;
-use galerkin_1d::galerkin::Formulation;
-use galerkin_1d::galerkin::GalerkinScheme;
-use galerkin_1d::grid;
-use galerkin_1d::grid::FaceType;
-use galerkin_1d::operators::{assemble_operators, Operators};
-use galerkin_1d::unknowns::{communicate, initialize_storage, Unknown};
+use std::ops::{Add, Div, Mul, Neg};
+use galerkin::functions::range_kutta::{RKA, RKB, RKC};
+use galerkin::galerkin_1d::flux::{FluxEnum, FluxScheme, NumericalFlux, Side};
+use galerkin::galerkin_1d::galerkin::compute_flux;
+use galerkin::galerkin_1d::galerkin::Formulation;
+use galerkin::galerkin_1d::galerkin::GalerkinScheme;
+use galerkin::galerkin_1d::grid;
+use galerkin::galerkin_1d::grid::FaceType;
+use galerkin::galerkin_1d::operators::{assemble_operators, Operators};
+use galerkin::galerkin_1d::unknowns::{communicate, initialize_storage, Unknown};
 use rulinalg::vector::Vector;
 use std::f64::consts;
 use std::iter::repeat;
 
+fn main() {
+    maxwell_1d_example();
+}
+
 #[derive(Debug)]
+#[allow(non_snake_case)]
 struct EH {
     E: Vector<f64>,
     H: Vector<f64>,
 }
 
 #[derive(Debug, Copy, Clone)]
+#[allow(non_snake_case)]
 struct EHUnit {
     E: f64,
     H: f64,
@@ -127,7 +131,7 @@ type Element = grid::Element<Maxwells>;
 
 type EHStorage = grid::ElementStorage<EH, Permittivity>;
 
-fn permittivityFlux(
+fn permittivity_flux(
     de: f64,
     dh: f64,
     f_minus: Permittivity,
@@ -156,7 +160,7 @@ impl NumericalFlux<EH, Permittivity> for MaxwellsInteriorFlux {
         outward_normal: f64,
     ) -> EHUnit {
         let (de, dh) = (minus.u.E - plus.u.E, minus.u.H - plus.u.H);
-        permittivityFlux(de, dh, minus.f, plus.f, outward_normal)
+        permittivity_flux(de, dh, minus.f, plus.f, outward_normal)
     }
 }
 
@@ -171,7 +175,7 @@ impl NumericalFlux<EH, Permittivity> for MaxwellsExteriorFlux {
         outward_normal: f64,
     ) -> EHUnit {
         let (de, dh) = (2. * minus.u.E, 0.);
-        permittivityFlux(de, dh, minus.f, plus.f, outward_normal)
+        permittivity_flux(de, dh, minus.f, plus.f, outward_normal)
     }
 }
 
@@ -300,7 +304,7 @@ fn maxwell_1d<Fx>(
                 let (residuals_e, residuals_h) = {
                     let (residuals_e, residuals_h) = &(residuals[elt.index as usize]);
                     let (rhs_e, rhs_h) =
-                        maxwell_rhs_1d(grid.elements.len() as i32, &elt, &storage, &operators);
+                        maxwell_rhs_1d(&elt, &storage, &operators);
                     (
                         residuals_e * RKA[int_rk] + rhs_e * dt,
                         residuals_h * RKA[int_rk] + rhs_h * dt,
@@ -342,7 +346,6 @@ fn maxwell_1d<Fx>(
 }
 
 fn maxwell_rhs_1d(
-    n_k: i32,
     elt: &Element,
     elt_storage: &EHStorage,
     operators: &Operators,
