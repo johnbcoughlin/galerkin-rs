@@ -1,23 +1,21 @@
+extern crate galerkin;
+#[macro_use]
 extern crate rulinalg;
 
 use self::rulinalg::vector::Vector;
-use functions::range_kutta::{RKA, RKB, RKC};
-use galerkin_1d::flux::FluxEnum;
-use galerkin_1d::flux::FluxScheme;
-use galerkin_1d::flux::FreeflowFlux;
-use galerkin_1d::flux::LaxFriedrichs;
-use galerkin_1d::galerkin::compute_flux;
-use galerkin_1d::galerkin::Formulation;
-use galerkin_1d::galerkin::GalerkinScheme;
-use galerkin_1d::grid;
-use galerkin_1d::grid::FaceType;
-use galerkin_1d::grid::{generate_grid, ReferenceElement};
-use galerkin_1d::operators::assemble_operators;
-use galerkin_1d::operators::Operators;
-use galerkin_1d::unknowns::{communicate, initialize_storage, Unknown};
-use plot::plot2d::Plotter2D;
+use galerkin::functions::range_kutta::{RKA, RKB, RKC};
+use galerkin::galerkin_1d::flux::{FluxEnum, FluxScheme, FreeflowFlux, LaxFriedrichs};
+use galerkin::galerkin_1d::galerkin::{compute_flux, Formulation, GalerkinScheme};
+use galerkin::galerkin_1d::grid::{self, generate_grid, FaceType, ReferenceElement};
+use galerkin::galerkin_1d::operators::{assemble_operators, Operators};
+use galerkin::galerkin_1d::unknowns::{communicate, initialize_storage, Unknown};
+use galerkin::plot::plot2d::Plotter2D;
 use std::f64::consts;
 use std::iter::repeat;
+
+fn main() {
+    advec_1d_example();
+}
 
 #[inline(never)]
 pub fn advec_1d<Fx>(
@@ -101,26 +99,6 @@ fn advec_rhs_1d(
     a: f64,
 ) -> Vector<f64> {
     let (du_left, du_right) = compute_flux(elt, elt_storage);
-    //    let du_left = {
-    //        let u_h = elt_storage.u_left_minus.get();
-    //        let numerical_flux = lax_friedrichs(
-    //            a,
-    //            u_h,
-    //            elt_storage.u_left_plus.get(),
-    //            elt.left_outward_normal,
-    //        );
-    //        (((a * u_h) - numerical_flux) * elt.left_outward_normal)
-    //    };
-    //    let du_right = {
-    //        let u_h = elt_storage.u_right_minus.get();
-    //        let numerical_flux = lax_friedrichs(
-    //            a,
-    //            u_h,
-    //            elt_storage.u_right_plus.get(),
-    //            elt.right_outward_normal,
-    //        );
-    //        (((a * u_h) - numerical_flux) * elt.right_outward_normal)
-    //    };
     let du: Vector<f64> = vector![du_left, du_right];
     let dr_u = &operators.d_r * &elt_storage.u_k.u;
     let a_rx = &elt_storage.r_x * (-a);
@@ -166,17 +144,18 @@ type Grid = grid::Grid<Advec>;
 
 type Element = grid::Element<Advec>;
 
-type LinearFlux = f64;
+#[derive(Clone, Copy, Debug)]
+pub struct LinearFlux(pub f64);
 
 impl grid::SpatialFlux for LinearFlux {
     type Unit = f64;
 
     fn first(&self) -> Self::Unit {
-        *self
+        self.0
     }
 
     fn last(&self) -> Self::Unit {
-        *self
+        self.0
     }
 
     fn zero() -> Self::Unit {
@@ -208,7 +187,7 @@ fn u_0(xs: &Vector<f64>) -> U {
     }
 }
 
-pub fn advec_1d_example() -> (Vec<f64>, Vec<f64>) {
+pub fn advec_1d_example() {
     let n_p = 8;
     let reference_element = ReferenceElement::legendre(n_p);
     let a = consts::PI * 2.;
@@ -228,33 +207,10 @@ pub fn advec_1d_example() -> (Vec<f64>, Vec<f64>) {
         left_boundary_face,
         right_boundary_face,
         LaxFriedrichs { alpha: 1. },
-        move |_| a,
+        move |_| LinearFlux(a),
     );
 
     let operators = assemble_operators::<U>(&reference_element);
 
     let storages = advec_1d(&u_0, &grid, &reference_element, &operators, a);
-
-    let mut xs: Vec<f64> = vec![];
-    for elt in grid.elements.iter() {
-        xs.extend(elt.x_k.iter());
-    }
-    let mut us: Vec<f64> = vec![];
-    for storage in storages.iter() {
-        us.extend(storage.u_k.u.iter());
-    }
-
-    (xs, us)
-}
-
-#[cfg(test)]
-mod tests {
-    extern crate gnuplot;
-
-    use galerkin_1d::advec::advec_1d_example;
-
-    #[test]
-    fn test() {
-        let (xs, us) = advec_1d_example();
-    }
 }
