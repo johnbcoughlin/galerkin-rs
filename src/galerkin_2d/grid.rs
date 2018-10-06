@@ -130,6 +130,7 @@ pub struct Grid<'grid, GS: GalerkinScheme>
     pub elements: Vec<Element<'grid, GS>>,
 }
 
+#[allow(too_many_arguments)]
 pub fn assemble_grid<'grid, GS, F, FExterior, FSP>(
     reference_element: &ReferenceElement,
     operators: &Operators,

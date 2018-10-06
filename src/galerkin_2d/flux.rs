@@ -33,7 +33,7 @@ pub trait FluxScheme<U>: Debug
         key: Self::K,
         minus: Side<'iter, U, Self::F>,
         plus: Side<'iter, U, Self::F>,
-        outward_normal: &Vec<Vec2>,
+        outward_normal: &[Vec2],
     ) -> U::Line;
 }
 
@@ -45,14 +45,19 @@ pub trait NumericalFlux<U, F>
     fn flux<'iter>(&self, minus: Side<'iter, U, F>, plus: Side<'iter, U, F>, outward_normal: Vec2) -> U::Line;
 }
 
+pub struct FaceFlux<GS>
+    where
+        GS: GalerkinScheme
+{
+    pub face1: <GS::U as Unknown>::Line,
+    pub face2: <GS::U as Unknown>::Line,
+    pub face3: <GS::U as Unknown>::Line,
+}
+
 pub fn compute_flux<'grid, GS>(
     elt: &Element<'grid, GS>,
     elt_storage: &ElementStorage<GS>,
-) -> (
-    <GS::U as Unknown>::Line,
-    <GS::U as Unknown>::Line,
-    <GS::U as Unknown>::Line,
-)
+) -> FaceFlux<GS>
     where
         GS: GalerkinScheme,
 {
@@ -99,5 +104,9 @@ pub fn compute_flux<'grid, GS>(
             elt.face3.flux_key, minus, plus, &elt.face3.outward_normal)
     };
 
-    (face1_flux, face2_flux, face3_flux)
+    FaceFlux {
+        face1: face1_flux,
+        face2: face2_flux,
+        face3: face3_flux,
+    }
 }

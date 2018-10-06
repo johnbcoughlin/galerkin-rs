@@ -43,6 +43,7 @@ impl ReferenceElement {
         }
     }
 
+    #[allow(non_snake_case)]
     pub fn legendre(n: i32) -> ReferenceElement {
         let n_p = (n + 1) * (n + 2) / 2;
         let (x, y) = ReferenceElement::equilateral_nodes(n);
@@ -83,8 +84,9 @@ impl ReferenceElement {
         }
     }
 
+    #[allow(non_snake_case)]
     fn equilateral_nodes(n: i32) -> (Vector<f64>, Vector<f64>) {
-        let nf = n as f64;
+        let nf = f64::from(n);
         let alpha = if n < 16 { ALPHAS[n as usize - 1] } else { 1.6 };
 
         // total number of nodes
@@ -96,9 +98,9 @@ impl ReferenceElement {
         let mut sk = 0;
         (0..n + 1).into_iter().for_each(|i| {
             (0..n + 1 - i).into_iter().for_each(|j| {
-                L1[sk] = (i as f64) / nf;
-                L3[sk] = (j as f64) / nf;
-                sk = sk + 1;
+                L1[sk] = f64::from(i) / nf;
+                L3[sk] = f64::from(j) / nf;
+                sk += 1;
             })
         });
         let L2 = &L1 * -1. - &L3 + 1.;
@@ -110,9 +112,9 @@ impl ReferenceElement {
         let blend_2 = &(L1.elemul(&L3)) * 4.;
         let blend_3 = &(L1.elemul(&L2)) * 4.;
 
-        let warpf_1 = warp_factor(n, &L3 - &L2);
-        let warpf_2 = warp_factor(n, &L1 - &L3);
-        let warpf_3 = warp_factor(n, &L2 - &L1);
+        let warpf_1 = warp_factor(n, &(&L3 - &L2));
+        let warpf_2 = warp_factor(n, &(&L1 - &L3));
+        let warpf_3 = warp_factor(n, &(&L2 - &L1));
 
         let alpha_1 = &L1 * alpha;
         let alpha_2 = &L2 * alpha;
@@ -138,25 +140,23 @@ impl ReferenceElement {
 
     pub fn rs_to_ab(rs: &Vector<f64>, ss: &Vector<f64>) -> (Vector<f64>, Vector<f64>) {
         let a: Vector<f64> = rs.iter().zip(ss.iter()).map(|(&r, &s)| {
-            if s != 1. { 2. * (r + 1.) / (1. - s) - 1. } else { -1. }
+            if (s - 1.).abs() < 1.0e-12 { 2. * (r + 1.) / (1. - s) - 1. } else { -1. }
         }).collect();
         let b = ss.clone();
         (a, b)
     }
 }
 
-fn warp_factor(n_p: i32, gammas: Vector<f64>) -> Vector<f64> {
+fn warp_factor(n_p: i32, gammas: &Vector<f64>) -> Vector<f64> {
     let dist_gl = jacobi_polynomials::gauss_lobatto_points(n_p);
     let dist_eq: Vector<f64> = Vector::new(
         (0..n_p + 1)
             .into_iter()
-            .map(|i| (i as f64) / (n_p as f64) * 2. - 1.)
+            .map(|i| f64::from(i) / f64::from(n_p) * 2. - 1.)
             .collect::<Vec<f64>>(),
     );
 
     let v = vandermonde::vandermonde(&dist_eq, n_p);
-
-    let n_r = gammas.size();
 
     let data: Vec<Vector<f64>> = (0..n_p + 1)
         .into_iter()
@@ -171,7 +171,7 @@ fn warp_factor(n_p: i32, gammas: Vector<f64>) -> Vector<f64> {
     let warp = l_mat.transpose() * (dist_gl - dist_eq);
 
     let zero_f: Vector<f64> = Vector::from_fn(gammas.size(), |i: usize| {
-        if { gammas[i].abs() < 1.0 - 1.0e-10 } {
+        if gammas[i].abs() < 1.0 - 1.0e-10 {
             1.
         } else {
             0.

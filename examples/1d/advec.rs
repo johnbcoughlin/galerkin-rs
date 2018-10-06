@@ -109,14 +109,6 @@ fn advec_rhs_1d(
     result
 }
 
-fn lax_friedrichs(a: f64, u_minus: f64, u_plus: f64, outward_normal: f64) -> f64 {
-    let f_a = u_minus * a;
-    let f_b = u_plus * a;
-    let avg = (f_a + f_b) / 2.;
-    let jump = (u_minus * (outward_normal)) + (u_plus * -outward_normal);
-    avg + a * jump / 2.
-}
-
 #[derive(Debug)]
 pub struct U {
     u: Vector<f64>,
@@ -196,7 +188,7 @@ pub fn advec_1d_example() {
         flux: FluxEnum::Left(LaxFriedrichs { alpha: 1. }),
     };
     let right_boundary_face = grid::Face {
-        face_type: grid::freeFlowBoundary(a),
+        face_type: grid::free_flow_boundary(a),
         flux: FluxEnum::Right(FreeflowFlux {}),
     };
     let grid: Grid = generate_grid(
@@ -211,6 +203,5 @@ pub fn advec_1d_example() {
     );
 
     let operators = assemble_operators::<U>(&reference_element);
-
-    let storages = advec_1d(&u_0, &grid, &reference_element, &operators, a);
+    advec_1d(&u_0, &grid, &reference_element, &operators, a);
 }
