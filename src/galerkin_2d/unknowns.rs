@@ -1,12 +1,10 @@
 extern crate rulinalg;
 
-use galerkin_2d::flux::FluxScheme;
 use galerkin_2d::galerkin::GalerkinScheme;
 use galerkin_2d::grid::{ElementStorage, FaceNumber, FaceType, Grid, SpatialVariable};
-use galerkin_2d::operators::Operators;
 use galerkin_2d::reference_element::ReferenceElement;
 use rulinalg::vector::Vector;
-use std::cell::{Cell, RefCell};
+use std::cell::RefCell;
 use std::fmt;
 use std::ops::{Add, Div, Mul, Neg};
 use std::ops::Sub;

@@ -2,7 +2,6 @@ extern crate itertools;
 extern crate rulinalg;
 
 use functions::vandermonde::{grad_vandermonde_2d, vandermonde, vandermonde_2d};
-use galerkin_2d::grid::Element;
 use galerkin_2d::grid::XYTuple;
 use galerkin_2d::reference_element::ReferenceElement;
 use galerkin_2d::unknowns::Unknown;
@@ -79,7 +78,6 @@ fn assemble_lift(reference_element: &ReferenceElement, v2d: &Matrix<f64>) -> Fac
     let n = reference_element.n as i32;
     let n_p = (n + 1) * (n + 2) / 2;
     let n_fp: usize = (n + 1) as usize;
-    let epsilon = 1.0e-12;
 
     let ss = &reference_element.ss;
     let rs = &reference_element.rs;
@@ -166,7 +164,6 @@ pub fn curl_2d(
     let u_xs = &operators.d_s * u_x;
     let u_yr = &operators.d_r * u_y;
     let u_ys = &operators.d_s * u_y;
-    let v_z = u_yr.elemul(&local_metric.r_x) + u_ys.elemul(&local_metric.s_x)
-        - u_xr.elemul(&local_metric.r_y) - u_xs.elemul(&local_metric.s_y);
-    v_z
+    u_yr.elemul(&local_metric.r_x) + u_ys.elemul(&local_metric.s_x)
+        - u_xr.elemul(&local_metric.r_y) - u_xs.elemul(&local_metric.s_y)
 }

@@ -7,7 +7,7 @@ use galerkin_2d::operators::Operators;
 use galerkin_2d::reference_element::ReferenceElement;
 use galerkin_2d::unknowns::Unknown;
 use rulinalg::vector::Vector;
-use std::cell::{Cell, RefCell};
+use std::cell::{RefCell};
 use std::collections::HashMap;
 use std::fmt;
 use std::fmt::Debug;
@@ -130,7 +130,7 @@ pub struct Grid<'grid, GS: GalerkinScheme>
     pub elements: Vec<Element<'grid, GS>>,
 }
 
-#[allow(too_many_arguments)]
+#[allow(too_many_arguments, many_single_char_names)]
 pub fn assemble_grid<'grid, GS, F, FExterior, FSP>(
     reference_element: &ReferenceElement,
     operators: &Operators,
@@ -150,7 +150,6 @@ pub fn assemble_grid<'grid, GS, F, FExterior, FSP>(
     let points = &mesh.points;
     let rs = &reference_element.rs;
     let ss = &reference_element.ss;
-    let triangles = &mesh.triangles;
 
     let mut edges_to_triangle: HashMap<Edge, EdgeType> = HashMap::new();
     for (i, ref triangle) in mesh.triangles.iter().enumerate() {

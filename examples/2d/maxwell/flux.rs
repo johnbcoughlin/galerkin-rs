@@ -1,28 +1,12 @@
 extern crate galerkin;
 extern crate rulinalg;
 
-use galerkin::galerkin_2d::flux::{FluxKey, FluxScheme, NumericalFlux, Side};
+use galerkin::galerkin_2d::flux::{FluxKey, FluxScheme, Side};
 use galerkin::galerkin_2d::grid::SpatialVariable;
 use galerkin::galerkin_2d::grid::Vec2;
 use galerkin::galerkin_2d::reference_element::ReferenceElement;
-use galerkin::galerkin_2d::unknowns::Unknown;
 use rulinalg::vector::Vector;
 use unknowns::{EH};
-
-#[derive(Copy, Clone)]
-pub struct Permittivity {
-    epsilon: f64,
-    mu: f64,
-}
-
-impl Permittivity {
-    fn zero() -> Self {
-        Permittivity {
-            epsilon: 0.,
-            mu: 0.,
-        }
-    }
-}
 
 #[derive(Debug, Clone, Copy)]
 pub struct Null();
@@ -70,7 +54,7 @@ impl Vacuum {
     fn interior_flux(
         minus: Side<EH, Null>,
         plus: Side<EH, Null>,
-        outward_normal: &Vec<Vec2>,
+        outward_normal: &[Vec2],
     ) -> EH {
         let d_eh = minus.u - plus.u;
         let (d_hx, d_hy, d_ez) = (d_eh.Hx, d_eh.Hy, d_eh.Ez);
@@ -79,8 +63,8 @@ impl Vacuum {
 
     fn exterior_flux(
         minus: Side<EH, Null>,
-        plus: Side<EH, Null>,
-        outward_normal: &Vec<Vec2>,
+        _plus: Side<EH, Null>,
+        outward_normal: &[Vec2],
     ) -> EH {
         let d_hx = Vector::zeros(minus.u.Hx.size());
         let d_hy = Vector::zeros(minus.u.Hy.size());
@@ -92,7 +76,7 @@ impl Vacuum {
         d_hx: &Vector<f64>,
         d_hy: &Vector<f64>,
         d_ez: &Vector<f64>,
-        outward_normal: &Vec<Vec2>,
+        outward_normal: &[Vec2],
     ) -> EH {
         let alpha = 1.;
         let (n_x, n_y): (Vector<f64>, Vector<f64>) = (
@@ -123,7 +107,7 @@ impl FluxScheme<EH> for Vacuum {
         key: Self::K,
         minus: Side<EH, Null>,
         plus: Side<EH, Null>,
-        outward_normal: &Vec<Vec2>,
+        outward_normal: &[Vec2],
     ) -> EH {
         match key {
             MaxwellFluxType::Interior => Vacuum::interior_flux(minus, plus, &outward_normal),

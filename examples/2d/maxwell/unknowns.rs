@@ -1,12 +1,8 @@
 extern crate galerkin;
 extern crate rulinalg;
 
-use galerkin::distmesh::distmesh_2d::ellipse;
-use galerkin::galerkin_2d::galerkin::GalerkinScheme;
-use galerkin::galerkin_2d::grid::{assemble_grid, ElementStorage, Grid};
 use galerkin::galerkin_2d::operators::FaceLift;
 use galerkin::galerkin_2d::operators::FaceLiftable;
-use galerkin::galerkin_2d::operators::{assemble_operators, Operators};
 use galerkin::galerkin_2d::reference_element::ReferenceElement;
 use galerkin::galerkin_2d::unknowns::Unknown;
 use rulinalg::vector::Vector;

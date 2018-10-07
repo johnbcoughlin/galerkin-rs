@@ -5,8 +5,6 @@ use galerkin_2d::grid::SpatialVariable;
 use galerkin_2d::grid::Vec2;
 use galerkin_2d::unknowns::Unknown;
 use std::ops::Deref;
-use std::cell::{Cell, Ref, RefCell};
-use rulinalg::vector::Vector;
 use std::fmt::Debug;
 
 pub struct Side<'iter, U, F>

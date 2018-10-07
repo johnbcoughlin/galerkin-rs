@@ -180,8 +180,7 @@ where
     let diff = (x_max - x_min) / f64::from(n_k);
     let transform = |left| {
         let s = (&reference_element.rs + 1.) / 2.;
-        let x = s * diff + left;
-        x
+        s * diff + left
     };
     let mut elements = vec![];
     let x_k = transform(x_min);

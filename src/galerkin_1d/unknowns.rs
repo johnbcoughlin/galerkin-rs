@@ -37,7 +37,7 @@ where
     Fx: Fn(&Vector<f64>) -> GS::U,
 {
     let mut result: Vec<ElementStorage<GS::U, GS::F>> = vec![];
-    for (i, elt) in grid.elements.iter().enumerate() {
+    for elt in &grid.elements {
         let d_r_x_k = &operators.d_r * &elt.x_k;
         let r_x = Vector::ones(d_r_x_k.size()).elediv(&d_r_x_k);
         let r_x_at_faces = vector![r_x[0], r_x[n_p as usize]];

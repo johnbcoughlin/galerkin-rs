@@ -9,7 +9,7 @@ use galerkin::distmesh::distmesh_2d::unit_square;
 use galerkin::galerkin_2d::flux::compute_flux;
 use galerkin::galerkin_2d::galerkin::GalerkinScheme;
 use galerkin::galerkin_2d::grid::Element;
-use galerkin::galerkin_2d::grid::{assemble_grid, Grid, SpatialVariable};
+use galerkin::galerkin_2d::grid::{assemble_grid, Grid};
 use flux::*;
 use unknowns::*;
 use galerkin::galerkin_2d::operators::curl_2d;
@@ -59,10 +59,8 @@ pub fn maxwell_2d<'grid, Fx>(
 
     let mut storage: Vec<ElementStorage<Maxwell2D>> = initialize_storage(
         u_0,
-        reference_element.n_p as i32,
         reference_element,
         grid,
-        operators,
     );
 
     let mut residuals: Vec<EH> = repeat_with(|| EH::zero(reference_element))
@@ -78,8 +76,7 @@ pub fn maxwell_2d<'grid, Fx>(
 
                 let residuals_eh = {
                     let residuals_eh = &(residuals[elt.index as usize]);
-                    let rhs = maxwell_rhs_2d(&elt, &storage, &operators, reference_element);
-//                    println!("{:?}", rhs);
+                    let rhs = maxwell_rhs_2d(&elt, &storage, &operators);
                     residuals_eh * RKA[int_rk] + rhs * dt
                 };
 
@@ -111,7 +108,6 @@ fn maxwell_rhs_2d<'grid>(
     elt: &EHElement<'grid>,
     elt_storage: &ElementStorage<Maxwell2D>,
     operators: &Operators,
-    reference_element: &ReferenceElement,
 ) -> EH {
     let faces_flux = compute_flux(elt, elt_storage);
 
@@ -158,7 +154,7 @@ pub fn maxwell_2d_example() {
     let reference_element = ReferenceElement::legendre(n_p);
     let operators = assemble_operators(&reference_element);
     let mesh = unit_square();
-    let boundary_condition = |t| EH::face1_zero(&reference_element);
+    let boundary_condition = |_| EH::face1_zero(&reference_element);
     let grid: Grid<Maxwell2D> = assemble_grid(
         &reference_element,
         &operators,
