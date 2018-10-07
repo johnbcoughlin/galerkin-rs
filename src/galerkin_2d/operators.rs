@@ -148,8 +148,8 @@ pub fn grad(
     operators: &Operators,
     local_metric: &LocalMetric,
 ) -> XYTuple<Vector<f64>> {
-    let u_r = &operators.d_r * u;
-    let u_s = &operators.d_s * u;
+    let u_r = blas::matrix_multiply(&operators.d_r, u);
+    let u_s = blas::matrix_multiply(&operators.d_s, u);
     let u_x = local_metric.r_x.elemul(&u_r) + local_metric.s_x.elemul(&u_s);
     let u_y = local_metric.r_y.elemul(&u_r) + local_metric.s_y.elemul(&u_s);
     XYTuple { x: u_x, y: u_y }
