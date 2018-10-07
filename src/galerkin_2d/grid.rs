@@ -178,38 +178,17 @@ pub fn assemble_grid<'grid, GS, F, FExterior, FSP>(
         );
         let x: Vector<f64> = (&(-rs - ss) * a.x + (rs + 1.) * b.x + (ss + 1.) * c.x) * 0.5;
         let y: Vector<f64> = (&(-rs - ss) * a.y + (rs + 1.) * b.y + (ss + 1.) * c.y) * 0.5;
-        if i == 0 {
-//            println!("rs: {}", rs);
-//            println!("ss: {}", ss);
-//            println!("a: {}, b: {}, c: {}", a, b, c);
-//            println!("x: {}", x);
-//            println!("y: {}", y);
-        }
-
-
 
         let x_r = &operators.d_r * &x;
         let x_s = &operators.d_s * &x;
         let y_r = &operators.d_r * &y;
         let y_s = &operators.d_s * &y;
         let jacobian = x_r.elemul(&y_s) - &(x_s.elemul(&y_r));
-//        if i == 0 {
-//            println!("x_r: {}", x_r);
-//            println!("x_s: {}", x_s);
-//            println!("y_r: {}", y_r);
-//            println!("y_s: {}", y_s);
-//        }
 
         let r_x = y_s.elediv(&jacobian);
         let s_x = -y_r.elediv(&jacobian);
         let r_y = -x_s.elediv(&jacobian);
         let s_y = x_r.elediv(&jacobian);
-//        if i == 0 {
-//            println!("r_x: {}", r_x);
-//            println!("s_x: {}", s_x);
-//            println!("r_y: {}", r_y);
-//            println!("s_y: {}", s_y);
-//        }
 
         let (e1, e2, e3) = triangle.edges();
         let edge_to_face_type = |e: &Edge| match edges_to_triangle.get(e) {
