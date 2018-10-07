@@ -8,6 +8,7 @@ use galerkin::galerkin_2d::unknowns::Unknown;
 use rulinalg::vector::Vector;
 use std::ops::{Add, Div, Mul, Neg, Sub};
 use std::fmt;
+use galerkin::blas::matrix_multiply;
 
 #[allow(non_snake_case)]
 #[derive(Debug, Clone, Copy)]
@@ -43,19 +44,19 @@ impl FaceLiftable for EH {
         face3: &<Self as Unknown>::Line,
     ) -> Self {
         let face1_lifted = EH {
-            Ez: &face_lift.face1 * &face1.Ez,
-            Hx: &face_lift.face1 * &face1.Hx,
-            Hy: &face_lift.face1 * &face1.Hy,
+            Ez: matrix_multiply(&face_lift.face1, &face1.Ez),
+            Hx: matrix_multiply(&face_lift.face1, &face1.Hx),
+            Hy: matrix_multiply(&face_lift.face1, &face1.Hy),
         };
         let face2_lifted = EH {
-            Ez: &face_lift.face2 * &face2.Ez,
-            Hx: &face_lift.face2 * &face2.Hx,
-            Hy: &face_lift.face2 * &face2.Hy,
+            Ez: matrix_multiply(&face_lift.face2, &face2.Ez),
+            Hx: matrix_multiply(&face_lift.face2, &face2.Hx),
+            Hy: matrix_multiply(&face_lift.face2, &face2.Hy),
         };
         let face3_lifted = EH {
-            Ez: &face_lift.face3 * &face3.Ez,
-            Hx: &face_lift.face3 * &face3.Hx,
-            Hy: &face_lift.face3 * &face3.Hy,
+            Ez: matrix_multiply(&face_lift.face3, &face3.Ez),
+            Hx: matrix_multiply(&face_lift.face3, &face3.Hx),
+            Hy: matrix_multiply(&face_lift.face3, &face3.Hy),
         };
         face1_lifted + face2_lifted + face3_lifted
     }
