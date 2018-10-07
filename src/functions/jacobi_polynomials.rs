@@ -83,7 +83,7 @@ pub fn grad_legendre_roots(n: i32) -> Vector<f64> {
 
     unsafe {
         dstev(
-            b'N',
+            b'N', // no transpose
             n,
             &mut diag,
             &mut subdiag,

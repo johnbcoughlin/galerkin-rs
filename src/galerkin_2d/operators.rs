@@ -9,6 +9,7 @@ use rulinalg::matrix::{BaseMatrix, BaseMatrixMut, Matrix};
 use rulinalg::vector::Vector;
 use galerkin_2d::grid::LocalMetric;
 use std::fmt;
+use blas;
 
 #[derive(Debug)]
 pub struct Operators {
@@ -160,10 +161,10 @@ pub fn curl_2d(
     operators: &Operators,
     local_metric: &LocalMetric,
 ) -> Vector<f64> {
-    let u_xr = &operators.d_r * u_x;
-    let u_xs = &operators.d_s * u_x;
-    let u_yr = &operators.d_r * u_y;
-    let u_ys = &operators.d_s * u_y;
+    let u_xr = blas::matrix_multiply(&operators.d_r, u_x);
+    let u_xs = blas::matrix_multiply(&operators.d_s, u_x);
+    let u_yr = blas::matrix_multiply(&operators.d_r, u_y);
+    let u_ys = blas::matrix_multiply(&operators.d_s, u_y);
     u_yr.elemul(&local_metric.r_x) + u_ys.elemul(&local_metric.s_x)
         - u_xr.elemul(&local_metric.r_y) - u_xs.elemul(&local_metric.s_y)
 }
