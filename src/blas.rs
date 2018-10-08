@@ -30,8 +30,39 @@ pub fn matrix_multiply(a: &Matrix<f64>, x: &Vector<f64>) -> Vector<f64> {
     y
 }
 
-pub fn elemul(a: &Vector<f64>, b: &Vector<f64>) -> Vector<f64> {
-    assert!(a.size() == b.size());
+/**
+ * Computes alpha*a.*b + beta * c
+ */
+pub fn elemul_affine(a: &Vector<f64>, b: &Vector<f64>, alpha: f64, c: &Vector<f64>, beta: f64) -> Vector<f64> {
+    assert_eq!(a.size(), b.size());
+    assert_eq!(a.size(), c.size());
+    let n = a.size() as i32;
+    let mut y = c.clone();
+    unsafe {
+        dgbmv(
+            b'N',
+            n,
+            n,
+            0, // no sub-diagonals
+            0, // no super-diagonals
+            alpha,
+            a.data().as_slice(),
+            1,
+            b.data().as_slice(),
+            1,
+            beta,
+            y.mut_data(),
+            1
+        );
+    }
+    y
+}
+
+/**
+ * Computes alpha*a.*b
+ */
+pub fn elemul_scalar(a: &Vector<f64>, b: &Vector<f64>, alpha: f64) -> Vector<f64> {
+    assert_eq!(a.size(), b.size());
     let n = a.size() as i32;
     let mut y = Vector::zeros(n as usize);
     unsafe {
@@ -41,7 +72,7 @@ pub fn elemul(a: &Vector<f64>, b: &Vector<f64>) -> Vector<f64> {
             n,
             0, // no sub-diagonals
             0, // no super-diagonals
-            1.,
+            alpha,
             a.data().as_slice(),
             1,
             b.data().as_slice(),
@@ -54,9 +85,16 @@ pub fn elemul(a: &Vector<f64>, b: &Vector<f64>) -> Vector<f64> {
     y
 }
 
+/**
+ * Computes a.*b
+ */
+pub fn elemul(a: &Vector<f64>, b: &Vector<f64>) -> Vector<f64> {
+    elemul_scalar(a, b, 1.)
+}
+
 #[cfg(test)]
 mod tests {
-    use super::{matrix_multiply, elemul};
+    use super::{matrix_multiply, elemul, elemul_affine};
 
     #[test]
     fn test_matrix_multiply() {
@@ -79,6 +117,16 @@ mod tests {
         let a = vector![1., 2., 3.];
         let b = vector![1., 3., 5.];
         let y = elemul(&a, &b);
+        assert_eq!(y[0], 1.);
+        assert_eq!(y[1], 6.);
+        assert_eq!(y[2], 15.);
+    }
+
+    #[test]
+    fn test_elemul_affine() {
+        let a = vector![1., 2., 3.];
+        let b = vector![1., 3., 5.];
+        let y = elemul_affine(&a, &b);
         assert_eq!(y[0], 1.);
         assert_eq!(y[1], 6.);
         assert_eq!(y[2], 15.);

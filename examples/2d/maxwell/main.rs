@@ -49,7 +49,7 @@ pub fn maxwell_2d<'grid, Fx>(
 ) where
     Fx: Fn(&Vector<f64>, &Vector<f64>) -> EH,
 {
-//    let mut plotter = GnuplotPlotter3D::create(-1., 1., -1., 1., -1., 1.);
+    let mut plotter = GnuplotPlotter3D::create(-1., 1., -1., 1., -1., 1.);
 
     let final_time = 10.0;
     let dt: f64 = 0.003668181816046;
@@ -92,13 +92,13 @@ pub fn maxwell_2d<'grid, Fx>(
         println!("epoch: {}", epoch);
         t = t + dt;
         if epoch % 20 == 0 {
-//            plotter.header();
+            plotter.header();
             for elt in (*grid).elements.iter() {
                 let storage = &storage[elt.index as usize];
-//                plotter.plot(&elt.x_k, &elt.y_k, &storage.u_k.Ez);
+                plotter.plot(&elt.x_k, &elt.y_k, &storage.u_k.Ez);
 //                println!("{}", &storage.u_k.Hx);
             }
-//            plotter.replot();
+            plotter.replot();
         }
     }
 }

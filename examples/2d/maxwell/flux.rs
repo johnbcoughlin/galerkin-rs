@@ -7,6 +7,7 @@ use galerkin::galerkin_2d::grid::Vec2;
 use galerkin::galerkin_2d::reference_element::ReferenceElement;
 use rulinalg::vector::Vector;
 use unknowns::{EH};
+use galerkin::blas;
 
 #[derive(Debug, Clone, Copy)]
 pub struct Null();
@@ -84,10 +85,10 @@ impl Vacuum {
             outward_normal.iter().map(|ref n| n.y).collect(),
         );
 
-        let n_dot_dh = &d_hx.elemul(&n_x) + &d_hy.elemul(&n_y);
-        let flux_hx = &d_ez.elemul(&n_y) + (&n_dot_dh.elemul(&n_x) - d_hx) * alpha;
-        let flux_hy = -&d_ez.elemul(&n_x) + (&n_dot_dh.elemul(&n_y) - d_hy) * alpha;
-        let flux_ez = -&d_hy.elemul(&n_x) + &d_hx.elemul(&n_y) - d_ez * alpha;
+        let n_dot_dh = blas::elemul(&d_hx, &n_x) + blas::elemul(&d_hy, &n_y);
+        let flux_hx = blas::elemul(&d_ez, &n_y) + (&n_dot_dh.elemul(&n_x) - d_hx) * alpha;
+        let flux_hy = blas::elemul_scalar(&d_ez, &n_x, -1.) + (&n_dot_dh.elemul(&n_y) - d_hy) * alpha;
+        let flux_ez = blas::elemul_scalar(&d_hy, &n_x, -1.) + &d_hx.elemul(&n_y) - d_ez * alpha;
 
         EH {
             Ez: flux_ez,
