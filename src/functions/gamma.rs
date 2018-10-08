@@ -3,7 +3,6 @@ extern crate num;
 use self::num::complex::Complex64;
 use std::f64::consts;
 
-#[allow(excessive_precision)]
 const P: [f64; 8] = [
     676.5203681218851,
     -1259.1392167224028,
@@ -23,10 +22,10 @@ pub fn gamma(z: Complex64) -> Complex64 {
         return y;
     } else {
         let z = z - 1.0;
-        let mut x = Complex64::new(0.999_999_999_999_809_9, 0.0);
-        for (i, p) in P.iter().enumerate() {
+        let mut x = Complex64::new(0.99999999999980993, 0.0);
+        for i in 0..P.len() {
             let z_inv = (z + ((i + 1) as f64)).inv();
-            x += z_inv.scale(*p);
+            x = x + z_inv.scale(P[i]);
         }
         let t = z + (P.len() as f64) - 0.5;
         let y = (2.0 * consts::PI).sqrt() * t.powc(z + Complex64::from(0.5)) * (-t).exp() * x;
@@ -38,7 +37,7 @@ impl GammaFn for f32 {
     type Output = f32;
 
     fn gamma(&self) -> f32 {
-        gamma(Complex64::from(f64::from(*self))).re as f32
+        gamma(Complex64::from(*self as f64)).re as f32
     }
 }
 

@@ -45,7 +45,7 @@ pub fn vandermonde_2d(n: i32, a: &Vector<f64>, b: &Vector<f64>) -> Matrix<f64> {
                 .into_iter()
                 .zip(col.iter_mut())
                 .for_each(|(x, dest)| *dest = x);
-            s_k += 1;
+            s_k = s_k + 1;
         })
     });
     v
@@ -72,7 +72,7 @@ pub fn grad_vandermonde_2d(n: i32, a: &Vector<f64>, b: &Vector<f64>) -> (Matrix<
                 .into_iter()
                 .zip(col_s.iter_mut())
                 .for_each(|(x, dest)| *dest = x);
-            s_k += 1;
+            s_k = s_k + 1;
         })
     });
     (v_r, v_s)

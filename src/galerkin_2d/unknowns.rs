@@ -18,6 +18,13 @@ pub trait Unknown
         + for<'a> Mul<&'a Vector<f64>, Output=Self::Line>
         + Div<f64, Output=Self::Line>
         + fmt::Debug,
+//        for<'a> &'a Self::Line: Neg<Output=Self::Line>
+//        + Add<Output=Self::Line>
+//        + Sub<Output=Self::Line>
+//        + Mul<f64, Output=Self::Line>
+//        + Div<f64, Output=Self::Line>
+//        + fmt::Debug,
+
 {
     type Line;
 
@@ -54,7 +61,7 @@ pub fn initialize_storage<GS, Fx>(
         Fx: Fn(&Vector<f64>, &Vector<f64>) -> GS::U,
 {
     let mut result: Vec<ElementStorage<GS>> = vec![];
-    for elt in &grid.elements {
+    for (i, elt) in grid.elements.iter().enumerate() {
         let (f_face1_minus, f_face1_plus) = match elt.face1.face_type {
             FaceType::Interior(j, face_number) => (
                 elt.spatial_parameters.edge_1(reference_element),
@@ -100,12 +107,12 @@ pub fn initialize_storage<GS, Fx>(
             u_face3_minus: RefCell::new(GS::U::face3_zero(reference_element)),
             u_face3_plus: RefCell::new(GS::U::face3_zero(reference_element)),
 
-            f_face1_minus,
-            f_face1_plus,
-            f_face2_minus,
-            f_face2_plus,
-            f_face3_minus,
-            f_face3_plus,
+            f_face1_minus: f_face1_minus,
+            f_face1_plus: f_face1_plus,
+            f_face2_minus: f_face2_minus,
+            f_face2_plus: f_face2_plus,
+            f_face3_minus: f_face3_minus,
+            f_face3_plus: f_face3_plus,
         });
     }
     result

@@ -30,17 +30,17 @@ pub struct GnuplotPlotter3D {
 impl GnuplotPlotter3D {
     fn begin_plotting(&mut self, x_min: f64, x_max: f64, y_min: f64, y_max: f64,
                       z_min: f64, z_max: f64) {
-        let stdin = (&mut self.gnuplot.stdin).as_mut().expect("No stdin");
-        writeln!(stdin, "set xrange [{}:{}]", x_min, x_max).unwrap();
-        writeln!(stdin, "set yrange [{}:{}]", y_min, y_max).unwrap();
-        writeln!(stdin, "set zrange [{}:{}]", z_min, z_max).unwrap();
-        writeln!(stdin, "set dgrid3d 30,30").unwrap();
-        writeln!(stdin, "set hidden3d").unwrap();
+        let mut stdin = (&mut self.gnuplot.stdin).as_mut().expect("No stdin");
+        writeln!(stdin, "set xrange [{}:{}]", x_min, x_max);
+        writeln!(stdin, "set yrange [{}:{}]", y_min, y_max);
+        writeln!(stdin, "set zrange [{}:{}]", z_min, z_max);
+        writeln!(stdin, "set dgrid3d 30,30");
+        writeln!(stdin, "set hidden3d");
         writeln!(
             stdin,
             "splot \"{}\" u 1:2:3 with lines",
             self.path.to_str().unwrap()
-        ).unwrap();
+        );
     }
 
 }
@@ -53,15 +53,16 @@ impl Plotter3D for GnuplotPlotter3D {
             .into_path();
         let path = dir.join("data");
         println!("Data file: {}", path.to_str().unwrap());
-        OpenOptions::new()
+        let file = OpenOptions::new()
             .create(true)
             .write(true)
             .open(&path)
             .expect("could not create data file");
-        let gnuplot = Command::new("gnuplot")
+        let mut gnuplot = Command::new("gnuplot")
             .arg("-p")
             .stdin(Stdio::piped())
             .spawn()
+            .ok()
             .expect("Couldn't spawn gnuplot. Make sure it's installed and on the PATH");
         let mut result = GnuplotPlotter3D { gnuplot, path };
         result.begin_plotting(x_min, x_max, y_min, y_max, z_min, z_max);
@@ -94,13 +95,13 @@ impl Plotter3D for GnuplotPlotter3D {
     }
 
     fn replot(&mut self) {
-        let stdin = (&mut self.gnuplot.stdin).as_mut().expect("No stdin");
+        let mut stdin = (&mut self.gnuplot.stdin).as_mut().expect("No stdin");
         writeln!(stdin, "replot").expect("error");
         thread::sleep(Duration::from_millis(100));
     }
 }
 
-#[allow(dead_code)]
+
 struct GliumPlotter3D {
 
 }

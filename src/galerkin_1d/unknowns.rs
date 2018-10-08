@@ -80,7 +80,7 @@ where
 pub fn communicate<GS: GalerkinScheme>(
     t: f64,
     grid: &grid::Grid<GS>,
-    storages: &[ElementStorage<GS::U, GS::F>],
+    storages: &Vec<ElementStorage<GS::U, GS::F>>,
 ) {
     for (i, elt) in grid.elements.iter().enumerate() {
         let mut storage = storages.get(i).expect("index mismatch");

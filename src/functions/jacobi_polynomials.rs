@@ -9,8 +9,8 @@ use self::rulinalg::vector::Vector;
 use functions::gamma::GammaFn;
 
 pub fn jacobi(xs: &Vector<f64>, alpha: i32, beta: i32, n: i32) -> Vector<f64> {
-    let alphaf = f64::from(alpha);
-    let betaf = f64::from(beta);
+    let alphaf = alpha as f64;
+    let betaf = beta as f64;
 
     // initial values
     // See NUDG p. 446
@@ -35,7 +35,7 @@ pub fn jacobi(xs: &Vector<f64>, alpha: i32, beta: i32, n: i32) -> Vector<f64> {
     let mut p_i = p_1;
 
     for i in 1..n {
-        let i = f64::from(i);
+        let i = i as f64;
         let h1 = 2. * i + alphaf + betaf;
         let a_new = 2. / (h1 + 2.)
             * ((i + 1.) * (i + 1. + alphaf + betaf) * (i + 1. + alphaf) * (i + 1. + betaf)
@@ -55,9 +55,9 @@ pub fn grad_jacobi(xs: &Vector<f64>, alpha: i32, beta: i32, n: i32) -> Vector<f6
     if n == 0 {
         return Vector::zeros(xs.size());
     }
-    let alphaf = f64::from(alpha);
-    let betaf = f64::from(beta);
-    let nf = f64::from(n);
+    let alphaf = alpha as f64;
+    let betaf = beta as f64;
+    let nf = n as f64;
     let factor: f64 = (nf * (nf + alphaf + betaf + 1.)).sqrt();
     let j = jacobi(xs, alpha + 1, beta + 1, n - 1);
     return j * factor;
@@ -71,7 +71,7 @@ pub fn grad_legendre_roots(n: i32) -> Vector<f64> {
     let mut diag = vec![0.0; n as usize];
     let mut subdiag: Vec<f64> = (2..n + 1)
         .map(|i| {
-            let i = f64::from(i);
+            let i = i as f64;
             let num = (i + 1.) / i;
             let denom = (2. * i - 1.) / (i - 1.) * (i * 2. + 1.) / (i);
             (num / denom).sqrt()
@@ -100,7 +100,7 @@ pub fn grad_legendre_roots(n: i32) -> Vector<f64> {
 pub fn gauss_lobatto_points(n: i32) -> Vector<f64> {
     let mut rs = vec![-1.];
     let roots = grad_legendre_roots(n);
-    for r in roots {
+    for r in roots.into_iter() {
         rs.push(r);
     }
     rs.push(1.);
@@ -167,12 +167,12 @@ pub fn grad_simplex_2d_polynomials(
             .zip(b.iter())
             .map(|(x, b)| *x * ((0.5 * (1. - *b)).powi(i - 1)))
             .collect::<Vector<f64>>();
-        tmp -= &(diff * 0.5 * f64::from(i));
+        tmp = tmp - &(diff * 0.5 * (i as f64));
     }
-    dmode_ds += fa.elemul(&tmp);
+    dmode_ds = dmode_ds + fa.elemul(&tmp);
 
-    dmode_dr *= 2.0_f64.powf(f64::from(i) + 0.5);
-    dmode_ds *= 2.0_f64.powf(f64::from(i) + 0.5);
+    dmode_dr = dmode_dr * 2.0_f64.powf(i as f64 + 0.5);
+    dmode_ds = dmode_ds * 2.0_f64.powf(i as f64 + 0.5);
 
     (dmode_dr, dmode_ds)
 }

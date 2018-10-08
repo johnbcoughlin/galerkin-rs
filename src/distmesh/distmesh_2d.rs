@@ -21,11 +21,11 @@ pub fn unit_square() -> Mesh {
 
 pub fn parse_distmesh_2d(points_file: &str, triangles_file: &str) -> Mesh {
     let points = points_file
-        .split('\n')
+        .split("\n")
         .map(|line: &str| line.parse::<Point2D>().expect("error parsing point: "))
         .collect();
     let triangles = triangles_file
-        .split('\n')
+        .split("\n")
         .map(|line: &str| line.parse::<Triangle>().expect("error parsing triangle: "))
         .collect();
 
@@ -37,7 +37,7 @@ impl FromStr for Point2D {
 
     // from a tab-separated pair of floats
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let coords: Vec<&str> = s.split('\t').collect();
+        let coords: Vec<&str> = s.split("\t").collect();
         let x = coords[0].parse::<f64>()?;
         let y = coords[1].parse::<f64>()?;
         Ok(Point2D { x, y })
@@ -48,7 +48,7 @@ impl FromStr for Triangle {
     type Err = ParseIntError;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let coords: Vec<&str> = s.split('\t').collect();
+        let coords: Vec<&str> = s.split("\t").collect();
         // subtract 1 because Matlab is 1-indexed
         let a = coords[0].parse::<i32>()? - 1;
         let b = coords[1].parse::<i32>()? - 1;

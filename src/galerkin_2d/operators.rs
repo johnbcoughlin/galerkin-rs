@@ -87,7 +87,7 @@ fn assemble_lift(reference_element: &ReferenceElement, v2d: &Matrix<f64>) -> Fac
     let face1_r: Vector<f64> = rs.select(&reference_element.face1.as_slice());
     let v = vandermonde(&face1_r, n);
     let mass_face1 = (&v * &v.transpose()).inverse().expect("non-invertible");
-    reference_element
+    &reference_element
         .face1
         .iter()
         .enumerate()
@@ -106,7 +106,7 @@ fn assemble_lift(reference_element: &ReferenceElement, v2d: &Matrix<f64>) -> Fac
     let face2_r: Vector<f64> = rs.select(&reference_element.face2.as_slice());
     let v = vandermonde(&face2_r, n);
     let mass_face2 = (&v * &v.transpose()).inverse().expect("non-invertible");
-    reference_element
+    &reference_element
         .face2
         .iter()
         .enumerate()
@@ -114,7 +114,7 @@ fn assemble_lift(reference_element: &ReferenceElement, v2d: &Matrix<f64>) -> Fac
             face2
                 .row_mut(i as usize)
                 .iter_mut()
-                .zip(mass_face2.row(j).into_iter())
+                .zip(mass_face1.row(j).into_iter())
                 .for_each(|(dest, x)| *dest = *x)
         });
     let lift_face_2 = &inv_mass_matrix * face2;
@@ -123,7 +123,7 @@ fn assemble_lift(reference_element: &ReferenceElement, v2d: &Matrix<f64>) -> Fac
     let face3_s: Vector<f64> = ss.select(&reference_element.face3.as_slice());
     let v = vandermonde(&face3_s, n_p);
     let mass_face3 = (&v * &v.transpose()).inverse().expect("non-invertible");
-    reference_element
+    &reference_element
         .face3
         .iter()
         .enumerate()
@@ -131,7 +131,7 @@ fn assemble_lift(reference_element: &ReferenceElement, v2d: &Matrix<f64>) -> Fac
             face3
                 .row_mut(i as usize)
                 .iter_mut()
-                .zip(mass_face3.row(j).into_iter())
+                .zip(mass_face1.row(j).into_iter())
                 .for_each(|(dest, x)| *dest = *x)
         });
     let lift_face_3 = &inv_mass_matrix * face3;

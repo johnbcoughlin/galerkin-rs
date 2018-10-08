@@ -109,13 +109,13 @@ fn maxwell_rhs_2d<'grid>(
     elt_storage: &ElementStorage<Maxwell2D>,
     operators: &Operators,
 ) -> EH {
-    let faces_flux = compute_flux(elt, elt_storage);
+    let (face1_flux, face2_flux, face3_flux) = compute_flux(elt, elt_storage);
 
     let flux = EH::lift_faces(
         &operators.lift,
-        &(faces_flux.face1 * &elt.face1.f_scale),
-        &(faces_flux.face2 * &elt.face2.f_scale),
-        &(faces_flux.face3 * &elt.face3.f_scale),
+        &(face1_flux * &elt.face1.f_scale),
+        &(face2_flux * &elt.face2.f_scale),
+        &(face3_flux * &elt.face3.f_scale),
     );
 
     if elt.index == 0 {

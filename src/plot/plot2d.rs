@@ -22,15 +22,16 @@ impl Plotter2D {
             .into_path();
         let path = dir.join("data");
         println!("Data file: {}", path.to_str().unwrap());
-        OpenOptions::new()
+        let file = OpenOptions::new()
             .create(true)
             .write(true)
             .open(&path)
             .expect("could not create data file");
-        let gnuplot = Command::new("gnuplot")
+        let mut gnuplot = Command::new("gnuplot")
             .arg("-p")
             .stdin(Stdio::piped())
             .spawn()
+            .ok()
             .expect("Couldn't spawn gnuplot. Make sure it's installed and on the PATH");
         let mut result = Plotter2D { gnuplot, path };
         result.begin_plotting(x_min, x_max, y_min, y_max);
@@ -38,14 +39,14 @@ impl Plotter2D {
     }
 
     fn begin_plotting(&mut self, x_min: f64, x_max: f64, y_min: f64, y_max: f64) {
-        let stdin = (&mut self.gnuplot.stdin).as_mut().expect("No stdin");
-        writeln!(stdin, "set xrange [{}:{}]", x_min, x_max).unwrap();
-        writeln!(stdin, "set yrange [{}:{}]", y_min, y_max).unwrap();
+        let mut stdin = (&mut self.gnuplot.stdin).as_mut().expect("No stdin");
+        writeln!(stdin, "set xrange [{}:{}]", x_min, x_max);
+        writeln!(stdin, "set yrange [{}:{}]", y_min, y_max);
         writeln!(
             stdin,
             "plot \"{}\" using 1:2 with lines",
             self.path.to_str().unwrap()
-        ).unwrap();
+        );
     }
 
     pub fn header(&mut self) {
@@ -73,7 +74,7 @@ impl Plotter2D {
     }
 
     pub fn replot(&mut self) {
-        let stdin = (&mut self.gnuplot.stdin).as_mut().expect("No stdin");
+        let mut stdin = (&mut self.gnuplot.stdin).as_mut().expect("No stdin");
         writeln!(stdin, "replot").expect("error");
         thread::sleep(Duration::from_millis(100));
     }
