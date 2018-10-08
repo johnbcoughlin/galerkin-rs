@@ -3,7 +3,10 @@ extern crate rulinalg;
 
 use rulinalg::vector::Vector;
 use rulinalg::matrix::{Matrix, BaseMatrix, BaseMatrixMut};
-use blas::blas::dgemv;
+use blas::blas::{
+    dgemv,
+    dgbmv,
+};
 
 pub fn matrix_multiply(a: &Matrix<f64>, x: &Vector<f64>) -> Vector<f64> {
     let m = a.cols() as i32;
@@ -27,9 +30,33 @@ pub fn matrix_multiply(a: &Matrix<f64>, x: &Vector<f64>) -> Vector<f64> {
     y
 }
 
+pub fn elemul(a: &Vector<f64>, b: &Vector<f64>) -> Vector<f64> {
+    assert!(a.size() == b.size());
+    let n = a.size() as i32;
+    let mut y = Vector::zeros(n as usize);
+    unsafe {
+        dgbmv(
+            b'N',
+            n,
+            n,
+            0, // no sub-diagonals
+            0, // no super-diagonals
+            1.,
+            a.data().as_slice(),
+            1,
+            b.data().as_slice(),
+            1,
+            0.,
+            y.mut_data(),
+            1
+        );
+    }
+    y
+}
+
 #[cfg(test)]
 mod tests {
-    use super::matrix_multiply;
+    use super::{matrix_multiply, elemul};
 
     #[test]
     fn test_matrix_multiply() {
@@ -45,5 +72,15 @@ mod tests {
         assert_eq!(y[1], 28.1);
         assert_eq!(y[2], 45.5);
         assert_eq!(y[3], 62.9);
+    }
+
+    #[test]
+    fn test_elemul() {
+        let a = vector![1., 2., 3.];
+        let b = vector![1., 3., 5.];
+        let y = elemul(&a, &b);
+        assert_eq!(y[0], 1.);
+        assert_eq!(y[1], 6.);
+        assert_eq!(y[2], 15.);
     }
 }
