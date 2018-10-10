@@ -191,13 +191,3 @@ fn exact_cavity_solution_eh0(xs: &Vector<f64>, ys: &Vector<f64>) -> EH {
         Ez,
     }
 }
-
-#[cfg(test)]
-mod tests {
-    use super::maxwell_2d_example;
-
-    #[test]
-    pub fn test_maxwell_2d() {
-        maxwell_2d_example();
-    }
-}
