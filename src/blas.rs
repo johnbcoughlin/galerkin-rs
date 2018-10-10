@@ -1,4 +1,8 @@
 extern crate blas;
+#[cfg(target_os = "macos")]
+extern crate accelerate_src;
+#[cfg(target_os = "linux")]
+extern crate openblas_src;
 extern crate rulinalg;
 
 use rulinalg::vector::Vector;

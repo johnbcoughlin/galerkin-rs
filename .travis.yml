@@ -1,13 +1,11 @@
 language: rust
 
 rust:
-  - stable
-  - beta
   - nightly
 
-matrix:
-  allow_failures:
-    - rust: nightly
-  fast_finish: true
-
 cache: cargo
+
+before_install:
+  - sudo apt-get update
+  - sudo apt-get install -y libopenblas-dev liblapack-dev gfortran
+  - rustc --print cfg
