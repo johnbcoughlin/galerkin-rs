@@ -126,9 +126,10 @@ mod tests {
     fn test_elemul_affine() {
         let a = vector![1., 2., 3.];
         let b = vector![1., 3., 5.];
-        let y = elemul_affine(&a, &b);
-        assert_eq!(y[0], 1.);
-        assert_eq!(y[1], 6.);
-        assert_eq!(y[2], 15.);
+        let c = vector![0.1, 0.2, 0.3];
+        let y = elemul_affine(&a, &b, 2., &c, 3.);
+        assert_eq!(y[0], 2.3);
+        assert_eq!(y[1], 12.6);
+        assert_eq!(y[2], 30.9);
     }
 }

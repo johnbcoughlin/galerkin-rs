@@ -194,7 +194,7 @@ mod tests {
     #[test]
     fn test_warp_factor() {
         let gammas = vector![-1., -0.5, 0., 0.5, 1.];
-        let actual = warp_factor(10, &gammas);
+        let actual = warp_factor(10, gammas);
         assert_eq!(actual[1], -0.24330999741877501);
     }
 
