@@ -89,8 +89,8 @@ mod tests {
         let rs = grad_legendre_roots(5);
         let v = vandermonde(&rs, 5);
         assert!((0.7071 - v[[0, 0]]).abs() < 0.001);
-        assert!((-1.2247 - v[[0, 1]]).abs() < 0.001);
-        assert!((-1.8708 - v[[0, 3]]).abs() < 0.001);
+        assert!((-0.93699 - v[[0, 1]]).abs() < 0.001);
+        assert!((0.69189 - v[[1, 3]]).abs() < 0.001);
     }
 
     #[test]
@@ -99,7 +99,7 @@ mod tests {
         let v = grad_vandermonde(&rs, 5);
         assert!((0.0000 - v[[0, 0]]).abs() < 0.001);
         assert!((1.2247 - v[[0, 1]]).abs() < 0.001);
-        assert!((11.2250 - v[[0, 3]]).abs() < 0.001);
+        assert!((-1.6647 - v[[1, 3]]).abs() < 0.001);
     }
 
     #[test]

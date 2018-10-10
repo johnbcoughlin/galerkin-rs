@@ -364,13 +364,3 @@ fn maxwell_rhs_1d(
 
     (rhs_e, rhs_h)
 }
-
-#[cfg(test)]
-mod tests {
-    use galerkin_1d::maxwell::maxwell_1d_example;
-
-    #[test]
-    fn test() {
-        maxwell_1d_example();
-    }
-}

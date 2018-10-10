@@ -196,7 +196,7 @@ pub fn advec_1d_example() {
         flux: FluxEnum::Left(LaxFriedrichs { alpha: 1. }),
     };
     let right_boundary_face = grid::Face {
-        face_type: grid::freeFlowBoundary<Advec>(a),
+        face_type: grid::freeFlowBoundary::<Advec>(a),
         flux: FluxEnum::Right(FreeflowFlux {}),
     };
     let grid: Grid = generate_grid(
