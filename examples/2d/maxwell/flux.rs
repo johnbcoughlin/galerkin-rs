@@ -55,35 +55,34 @@ impl Vacuum {
     fn interior_flux(
         minus: Side<EH, Null>,
         plus: Side<EH, Null>,
-        outward_normal: &[Vec2],
+        outward_normal_x: &Vector<f64>,
+        outward_normal_y: &Vector<f64>,
     ) -> EH {
         let d_eh = minus.u - plus.u;
         let (d_hx, d_hy, d_ez) = (d_eh.Hx, d_eh.Hy, d_eh.Ez);
-        Self::flux_calculation(d_hx, d_hy, d_ez, outward_normal)
+        Self::flux_calculation(d_hx, d_hy, d_ez, outward_normal_x, outward_normal_y)
     }
 
     fn exterior_flux(
         minus: Side<EH, Null>,
         _plus: Side<EH, Null>,
-        outward_normal: &[Vec2],
+        outward_normal_x: &Vector<f64>,
+        outward_normal_y: &Vector<f64>,
     ) -> EH {
         let d_hx = Vector::zeros(minus.u.Hx.size());
         let d_hy = Vector::zeros(minus.u.Hy.size());
         let d_ez = &minus.u.Ez * 2.;
-        Self::flux_calculation(d_hx, d_hy, d_ez, outward_normal)
+        Self::flux_calculation(d_hx, d_hy, d_ez, outward_normal_x, outward_normal_y)
     }
 
     fn flux_calculation(
         d_hx: Vector<f64>,
         d_hy: Vector<f64>,
         d_ez: Vector<f64>,
-        outward_normal: &[Vec2],
+        n_x: &Vector<f64>,
+        n_y: &Vector<f64>,
     ) -> EH {
         let alpha = 1.;
-        let (n_x, n_y): (Vector<f64>, Vector<f64>) = (
-            outward_normal.iter().map(|ref n| n.x).collect(),
-            outward_normal.iter().map(|ref n| n.y).collect(),
-        );
 
         let n_dot_dh = blas::elemul_affine_(&d_hx, &n_x, 1., blas::elemul(&d_hy, &n_y), 1.);
 
@@ -113,11 +112,12 @@ impl FluxScheme<EH> for Vacuum {
         key: Self::K,
         minus: Side<EH, Null>,
         plus: Side<EH, Null>,
-        outward_normal: &[Vec2],
+        outward_normal_x: &Vector<f64>,
+        outward_normal_y: &Vector<f64>,
     ) -> EH {
         match key {
-            MaxwellFluxType::Interior => Vacuum::interior_flux(minus, plus, &outward_normal),
-            MaxwellFluxType::Exterior => Vacuum::exterior_flux(minus, plus, &outward_normal),
+            MaxwellFluxType::Interior => Vacuum::interior_flux(minus, plus, outward_normal_x, outward_normal_y),
+            MaxwellFluxType::Exterior => Vacuum::exterior_flux(minus, plus, outward_normal_x, outward_normal_y),
         }
     }
 }

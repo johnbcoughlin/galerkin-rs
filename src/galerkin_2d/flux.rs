@@ -6,6 +6,7 @@ use galerkin_2d::grid::Vec2;
 use galerkin_2d::unknowns::Unknown;
 use std::ops::Deref;
 use std::fmt::Debug;
+use rulinalg::vector::Vector;
 
 pub struct Side<'iter, U, F>
     where
@@ -31,7 +32,8 @@ pub trait FluxScheme<U>: Debug
         key: Self::K,
         minus: Side<'iter, U, Self::F>,
         plus: Side<'iter, U, Self::F>,
-        outward_normal: &[Vec2],
+        outward_normal_x: &Vector<f64>,
+        outward_normal_y: &Vector<f64>,
     ) -> U::Line;
 }
 
@@ -40,7 +42,7 @@ pub trait NumericalFlux<U, F>
         U: Unknown,
         F: SpatialVariable,
 {
-    fn flux<'iter>(&self, minus: Side<'iter, U, F>, plus: Side<'iter, U, F>, outward_normal: Vec2) -> U::Line;
+    fn flux<'iter>(&self, minus: Side<'iter, U, F>, plus: Side<'iter, U, F>, outward_normal_x: &Vector<f64>, outward_normal_y: &Vector<f64>) -> U::Line;
 }
 
 pub fn compute_flux<'grid, GS>(
@@ -66,7 +68,7 @@ pub fn compute_flux<'grid, GS>(
             f: &elt_storage.f_face1_plus,
         };
         <GS::FS as FluxScheme<GS::U>>::flux_type(
-            elt.face1.flux_key, minus, plus, &elt.face1.outward_normal)
+            elt.face1.flux_key, minus, plus, &elt.face1.outward_normal_x, &elt.face1.outward_normal_y)
     };
     let face2_flux = {
         let u_minus = elt_storage.u_face2_minus.borrow();
@@ -80,7 +82,7 @@ pub fn compute_flux<'grid, GS>(
             f: &elt_storage.f_face2_plus,
         };
         <GS::FS as FluxScheme<GS::U>>::flux_type(
-            elt.face2.flux_key, minus, plus, &elt.face2.outward_normal)
+            elt.face2.flux_key, minus, plus, &elt.face2.outward_normal_x, &elt.face2.outward_normal_y)
     };
     let face3_flux = {
         let u_minus = elt_storage.u_face3_minus.borrow();
@@ -94,7 +96,7 @@ pub fn compute_flux<'grid, GS>(
             f: &elt_storage.f_face3_plus,
         };
         <GS::FS as FluxScheme<GS::U>>::flux_type(
-            elt.face3.flux_key, minus, plus, &elt.face3.outward_normal)
+            elt.face3.flux_key, minus, plus, &elt.face3.outward_normal_x, &elt.face3.outward_normal_y)
     };
 
     (face1_flux, face2_flux, face3_flux)
