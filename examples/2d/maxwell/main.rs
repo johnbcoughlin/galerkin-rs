@@ -98,7 +98,7 @@ pub fn maxwell_2d<'grid, Fx>(
                 plotter.plot(&elt.x_k, &elt.y_k, &storage.u_k.Ez);
 //                println!("{}", &storage.u_k.Hx);
             }
-            plotter.replot();
+//            plotter.replot();
         }
     }
 }

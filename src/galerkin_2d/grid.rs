@@ -7,12 +7,12 @@ use galerkin_2d::operators::Operators;
 use galerkin_2d::reference_element::ReferenceElement;
 use galerkin_2d::unknowns::Unknown;
 use rulinalg::vector::Vector;
-use std::cell::{RefCell};
+use std::cell::RefCell;
 use std::collections::HashMap;
 use std::fmt;
 use std::fmt::Debug;
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum FaceNumber {
     One,
     Two,
@@ -20,15 +20,15 @@ pub enum FaceNumber {
 }
 
 pub enum FaceType<'grid, GS: GalerkinScheme>
-    where
-        <GS::U as Unknown>::Line: 'grid,
-        <GS::FS as FluxScheme<GS::U>>::F: 'grid,
+where
+    <GS::U as Unknown>::Line: 'grid,
+    <GS::FS as FluxScheme<GS::U>>::F: 'grid,
 {
     // An interior face with the index of the element on the other side.
     Interior(i32, FaceNumber),
 
     // A complex boundary condition which may depend on the other side of the boundary and on
-// the time parameter.
+    // the time parameter.
     Boundary(
         // the exterior value of the unknown, as a function of time
         &'grid Fn(f64) -> <GS::U as Unknown>::Line,
@@ -48,9 +48,9 @@ impl<'grid, GS: GalerkinScheme> Debug for FaceType<'grid, GS> {
 
 #[derive(Debug)]
 pub struct Face<'grid, GS: GalerkinScheme>
-    where
-        <GS::U as Unknown>::Line: 'grid,
-        <GS::FS as FluxScheme<GS::U>>::F: 'grid,
+where
+    <GS::U as Unknown>::Line: 'grid,
+    <GS::FS as FluxScheme<GS::U>>::F: 'grid,
 {
     pub face_type: FaceType<'grid, GS>,
     pub flux_key: <GS::FS as FluxScheme<GS::U>>::K,
@@ -82,9 +82,9 @@ pub struct LocalMetric {
 
 #[derive(Debug)]
 pub struct Element<'grid, GS: GalerkinScheme>
-    where
-        <GS::U as Unknown>::Line: 'grid,
-        <GS::FS as FluxScheme<GS::U>>::F: 'grid,
+where
+    <GS::U as Unknown>::Line: 'grid,
+    <GS::FS as FluxScheme<GS::U>>::F: 'grid,
 {
     pub index: i32,
     pub x_k: Vector<f64>,
@@ -100,8 +100,8 @@ pub struct Element<'grid, GS: GalerkinScheme>
 }
 
 pub struct ElementStorage<GS>
-    where
-        GS: GalerkinScheme,
+where
+    GS: GalerkinScheme,
 {
     pub u_k: GS::U,
 
@@ -123,36 +123,16 @@ pub struct ElementStorage<GS>
 
 #[derive(Debug)]
 pub struct Grid<'grid, GS: GalerkinScheme>
-    where
-        <GS::U as Unknown>::Line: 'grid,
-        <GS::FS as FluxScheme<GS::U>>::F: 'grid,
+where
+    <GS::U as Unknown>::Line: 'grid,
+    <GS::FS as FluxScheme<GS::U>>::F: 'grid,
 {
     pub elements: Vec<Element<'grid, GS>>,
 }
 
-#[allow(too_many_arguments, many_single_char_names)]
-pub fn assemble_grid<'grid, GS, F, FExterior, FSP>(
-    reference_element: &ReferenceElement,
-    operators: &Operators,
-    mesh: &Mesh,
-    boundary_condition: &'grid F,
-    exterior_boundary_spatial_parameter: &'grid FExterior,
-    initial_spatial_parameter: FSP,
-    interior_flux_key: <GS::FS as FluxScheme<GS::U>>::K,
-    exterior_flux_key: <GS::FS as FluxScheme<GS::U>>::K,
-) -> Grid<'grid, GS>
-    where
-        GS: GalerkinScheme,
-        F: Fn(f64) -> <GS::U as Unknown>::Line + 'grid,
-        FExterior: Fn() -> <<GS::FS as FluxScheme<GS::U>>::F as SpatialVariable>::Line,
-        FSP: Fn(&Vector<f64>, &Vector<f64>) -> <GS::FS as FluxScheme<GS::U>>::F,
-{
-    let points = &mesh.points;
-    let rs = &reference_element.rs;
-    let ss = &reference_element.ss;
-
+fn assemble_edges_to_triangle(triangles: &Vec<Triangle>) -> HashMap<Edge, EdgeType> {
     let mut edges_to_triangle: HashMap<Edge, EdgeType> = HashMap::new();
-    for (i, ref triangle) in mesh.triangles.iter().enumerate() {
+    for (i, ref triangle) in triangles.iter().enumerate() {
         let (e1, e2, e3) = triangle.edges();
         let modifier = |e: Edge, face_number: FaceNumber, map: &mut HashMap<Edge, EdgeType>| {
             let new_value = if map.contains_key(&e) {
@@ -167,6 +147,31 @@ pub fn assemble_grid<'grid, GS, F, FExterior, FSP>(
         modifier(e2, FaceNumber::Two, &mut edges_to_triangle);
         modifier(e3, FaceNumber::Three, &mut edges_to_triangle);
     }
+    edges_to_triangle
+}
+
+#[allow(too_many_arguments, many_single_char_names)]
+pub fn assemble_grid<'grid, GS, F, FExterior, FSP>(
+    reference_element: &ReferenceElement,
+    operators: &Operators,
+    mesh: &Mesh,
+    boundary_condition: &'grid F,
+    exterior_boundary_spatial_parameter: &'grid FExterior,
+    initial_spatial_parameter: FSP,
+    interior_flux_key: <GS::FS as FluxScheme<GS::U>>::K,
+    exterior_flux_key: <GS::FS as FluxScheme<GS::U>>::K,
+) -> Grid<'grid, GS>
+where
+    GS: GalerkinScheme,
+    F: Fn(f64) -> <GS::U as Unknown>::Line + 'grid,
+    FExterior: Fn() -> <<GS::FS as FluxScheme<GS::U>>::F as SpatialVariable>::Line,
+    FSP: Fn(&Vector<f64>, &Vector<f64>) -> <GS::FS as FluxScheme<GS::U>>::F,
+{
+    let points = &mesh.points;
+    let rs = &reference_element.rs;
+    let ss = &reference_element.ss;
+
+    let edges_to_triangle = assemble_edges_to_triangle(&mesh.triangles);
 
     let mut elements = Vec::new();
 
@@ -197,10 +202,10 @@ pub fn assemble_grid<'grid, GS, F, FExterior, FSP>(
             } else {
                 (FaceType::Interior(*a, *a_number), interior_flux_key)
             },
-            Some(EdgeType::Exterior(_, _)) => {
-                (FaceType::Boundary(boundary_condition, exterior_boundary_spatial_parameter),
-                 exterior_flux_key)
-            }
+            Some(EdgeType::Exterior(_, _)) => (
+                FaceType::Boundary(boundary_condition, exterior_boundary_spatial_parameter),
+                exterior_flux_key,
+            ),
             None => panic!("edge_to_triangle did not contain {:?}", e),
         };
         let local_metric = LocalMetric {
@@ -251,7 +256,7 @@ pub fn assemble_grid<'grid, GS, F, FExterior, FSP>(
             face2,
             face3,
         });
-    };
+    }
     Grid { elements }
 }
 
@@ -262,8 +267,8 @@ fn build_face<'grid, GS>(
     reference_element: &ReferenceElement,
     local_metric: &LocalMetric,
 ) -> Face<'grid, GS>
-    where
-        GS: GalerkinScheme
+where
+    GS: GalerkinScheme,
 {
     let slice = reference_element.face(face_number).as_slice();
     let x_r_face = local_metric.x_r.select(slice);
@@ -281,14 +286,20 @@ fn build_face<'grid, GS>(
         FaceNumber::Two => -x_s_face.clone() + x_r_face.clone(),
         FaceNumber::Three => x_s_face.clone(),
     };
-    let surface_jacobian: Vector<f64> = (&(nx.elemul(&nx)) + &(ny.elemul(&ny))).iter()
+    let surface_jacobian: Vector<f64> = (&(nx.elemul(&nx)) + &(ny.elemul(&ny)))
+        .iter()
         .map(|&f| f.sqrt())
         .collect();
-    let f_scale: Vector<f64> = surface_jacobian.elediv(&local_metric.jacobian.select(
-        reference_element.face(face_number).as_slice()));
+    let f_scale: Vector<f64> = surface_jacobian.elediv(
+        &local_metric
+            .jacobian
+            .select(reference_element.face(face_number).as_slice()),
+    );
     let nx = nx.elediv(&surface_jacobian);
     let ny = ny.elediv(&surface_jacobian);
-    let outward_normal: Vec<Vec2> = nx.into_iter().zip(ny.into_iter())
+    let outward_normal: Vec<Vec2> = nx
+        .into_iter()
+        .zip(ny.into_iter())
         .map(|(x, y)| Vec2 { x, y })
         .collect();
     Face {
@@ -326,7 +337,7 @@ impl Triangle {
     }
 }
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
 enum EdgeType {
     Exterior(i32, FaceNumber),
     Interior(i32, FaceNumber, i32, FaceNumber),
@@ -373,4 +384,46 @@ pub trait SpatialVariable: Debug {
     fn face2_zero(reference_element: &ReferenceElement) -> Self::Line;
 
     fn face3_zero(reference_element: &ReferenceElement) -> Self::Line;
+}
+
+#[cfg(test)]
+mod assemble_edges_to_triangle_test {
+    use super::{assemble_edges_to_triangle, Edge, EdgeType, FaceNumber::*};
+    use distmesh::mesh::Triangle;
+    #[macro_use]
+    use testing::assertions::{self, Assertion};
+    use std::collections::HashMap;
+
+    #[test]
+    fn test_no_triangles() {
+        let result = assemble_edges_to_triangle(&vec![]);
+        assert_that!(result).is_empty();
+    }
+
+    #[test]
+    fn test_one_triangle() {
+        let triangles = vec![Triangle { a: 0, b: 1, c: 2 }];
+        let mut result = assemble_edges_to_triangle(&triangles);
+        assert_that!(result).has_size(3);
+        assert_that!(result.remove(&Edge { n1: 0, n2: 1 }))
+            .contains(EdgeType::Exterior(0, One));
+        assert_that!(result.remove(&Edge { n1: 1, n2: 2 }))
+            .contains(EdgeType::Exterior(0, Two));
+        assert_that!(result.remove(&Edge { n1: 0, n2: 2 }))
+            .contains(EdgeType::Exterior(0, Three));
+    }
+
+    #[test]
+    fn test_two_triangles() {
+        let triangles = vec![Triangle { a: 0, b: 1, c: 2 }, Triangle { a: 1, b: 2, c: 3 }];
+        let mut result = assemble_edges_to_triangle(&triangles);
+        assert_that!(result).has_size(5);
+        assert_that!(remove_edge(&mut result, 0, 1)).contains(EdgeType::Exterior(0, One));
+        assert_that!(remove_edge(&mut result, 1, 2)).contains(EdgeType::Interior(0, Two, 1, One));
+        assert_that!(remove_edge(&mut result, 0, 2)).contains(EdgeType::Exterior(0, Three));
+    }
+
+    fn remove_edge(result: &mut HashMap<Edge, EdgeType>, n1: i32, n2: i32) -> Option<EdgeType> {
+        result.remove(&Edge {n1, n2})
+    }
 }
