@@ -1,5 +1,7 @@
+#![feature(test)]
 extern crate galerkin;
 extern crate rulinalg;
+extern crate test;
 
 mod flux;
 mod unknowns;
@@ -26,7 +28,7 @@ use galerkin::functions::range_kutta::RKB;
 use galerkin::plot::plot3d::{Plotter3D, GnuplotPlotter3D};
 
 fn main() {
-    maxwell_2d_example();
+    maxwell_2d_example(true, 10.0);
 }
 
 #[derive(Debug)]
@@ -46,12 +48,13 @@ pub fn maxwell_2d<'grid, Fx>(
     reference_element: &ReferenceElement,
     operators: &Operators,
     u_0: Fx,
+    plot: bool,
+    final_time: f64,
 ) where
     Fx: Fn(&Vector<f64>, &Vector<f64>) -> EH,
 {
-    let mut plotter = GnuplotPlotter3D::create(-1., 1., -1., 1., -1., 1.);
+    let mut plotter = if plot { Some(GnuplotPlotter3D::create(-1., 1., -1., 1., -1., 1.)) } else { None };
 
-    let final_time = 10.0;
     let dt: f64 = 0.003668181816046;
     let n_t = (final_time / dt).ceil() as i32;
 
@@ -92,13 +95,17 @@ pub fn maxwell_2d<'grid, Fx>(
         println!("epoch: {}", epoch);
         t = t + dt;
         if epoch % 20 == 0 {
-            plotter.header();
-            for elt in (*grid).elements.iter() {
-                let storage = &storage[elt.index as usize];
-                plotter.plot(&elt.x_k, &elt.y_k, &storage.u_k.Ez);
-//                println!("{}", &storage.u_k.Hx);
+            match plotter {
+                None => {},
+                Some(ref mut plotter) => {
+                    plotter.header();
+                    for elt in (*grid).elements.iter() {
+                        let storage = &storage[elt.index as usize];
+                        plotter.plot(&elt.x_k, &elt.y_k, &storage.u_k.Ez);
+                    }
+                    plotter.replot();
+                },
             }
-//            plotter.replot();
         }
     }
 }
@@ -149,7 +156,7 @@ fn maxwell_rhs_2d<'grid>(
     }
 }
 
-pub fn maxwell_2d_example() {
+pub fn maxwell_2d_example(plot: bool, final_time: f64) {
     let n_p = 10;
     let reference_element = ReferenceElement::legendre(n_p);
     let operators = assemble_operators(&reference_element);
@@ -167,7 +174,7 @@ pub fn maxwell_2d_example() {
     );
 
 //    println!("{}", operators.lift);
-    maxwell_2d(&grid, &reference_element, &operators, &exact_cavity_solution_eh0);
+    maxwell_2d(&grid, &reference_element, &operators, &exact_cavity_solution_eh0, plot, final_time);
 }
 
 #[allow(non_snake_case)]
@@ -189,5 +196,35 @@ fn exact_cavity_solution_eh0(xs: &Vector<f64>, ys: &Vector<f64>) -> EH {
         Hx,
         Hy,
         Ez,
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    extern crate test;
+
+    use super::*;
+    use test::Bencher;
+
+    #[bench]
+    pub fn bench(b: &mut Bencher) {
+        let n_p = 10;
+        let reference_element = ReferenceElement::legendre(n_p);
+        let operators = assemble_operators(&reference_element);
+        let mesh = unit_square();
+        let boundary_condition = |_| EH::face1_zero(&reference_element);
+        let grid: Grid<Maxwell2D> = assemble_grid(
+            &reference_element,
+            &operators,
+            &mesh,
+            &boundary_condition,
+            &|| Null(),
+            |_, _| Null(),
+            MaxwellFluxType::Interior,
+            MaxwellFluxType::Exterior,
+        );
+
+        b.iter(|| maxwell_2d(&grid, &reference_element, &operators,
+                             &exact_cavity_solution_eh0, false, 0.01));
     }
 }
