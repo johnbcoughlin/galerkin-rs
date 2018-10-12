@@ -56,7 +56,8 @@ where
     pub flux_key: <GS::FS as FluxScheme<GS::U>>::K,
     pub surface_jacobian: Vector<f64>,
     pub f_scale: Vector<f64>,
-    pub outward_normal: Vec<Vec2>,
+    pub outward_normal_x: Vector<f64>,
+    pub outward_normal_y: Vector<f64>,
 }
 
 #[derive(Debug)]
@@ -297,17 +298,13 @@ where
     );
     let nx = nx.elediv(&surface_jacobian);
     let ny = ny.elediv(&surface_jacobian);
-    let outward_normal: Vec<Vec2> = nx
-        .into_iter()
-        .zip(ny.into_iter())
-        .map(|(x, y)| Vec2 { x, y })
-        .collect();
     Face {
         face_type,
         flux_key,
         surface_jacobian,
         f_scale,
-        outward_normal,
+        outward_normal_x: nx,
+        outward_normal_y: ny,
     }
 }
 
