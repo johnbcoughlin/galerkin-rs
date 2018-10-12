@@ -59,7 +59,7 @@ impl Vacuum {
     ) -> EH {
         let d_eh = minus.u - plus.u;
         let (d_hx, d_hy, d_ez) = (d_eh.Hx, d_eh.Hy, d_eh.Ez);
-        Self::flux_calculation(&d_hx, &d_hy, &d_ez, outward_normal)
+        Self::flux_calculation(d_hx, d_hy, d_ez, outward_normal)
     }
 
     fn exterior_flux(
@@ -70,13 +70,13 @@ impl Vacuum {
         let d_hx = Vector::zeros(minus.u.Hx.size());
         let d_hy = Vector::zeros(minus.u.Hy.size());
         let d_ez = &minus.u.Ez * 2.;
-        Self::flux_calculation(&d_hx, &d_hy, &d_ez, outward_normal)
+        Self::flux_calculation(d_hx, d_hy, d_ez, outward_normal)
     }
 
     fn flux_calculation(
-        d_hx: &Vector<f64>,
-        d_hy: &Vector<f64>,
-        d_ez: &Vector<f64>,
+        d_hx: Vector<f64>,
+        d_hy: Vector<f64>,
+        d_ez: Vector<f64>,
         outward_normal: &[Vec2],
     ) -> EH {
         let alpha = 1.;
@@ -85,10 +85,15 @@ impl Vacuum {
             outward_normal.iter().map(|ref n| n.y).collect(),
         );
 
-        let n_dot_dh = blas::elemul(&d_hx, &n_x) + blas::elemul(&d_hy, &n_y);
-        let flux_hx = blas::elemul(&d_ez, &n_y) + (&n_dot_dh.elemul(&n_x) - d_hx) * alpha;
-        let flux_hy = blas::elemul_scalar(&d_ez, &n_x, -1.) + (&n_dot_dh.elemul(&n_y) - d_hy) * alpha;
-        let flux_ez = blas::elemul_scalar(&d_hy, &n_x, -1.) + &d_hx.elemul(&n_y) - d_ez * alpha;
+        let n_dot_dh = blas::elemul_affine_(&d_hx, &n_x, 1., blas::elemul(&d_hy, &n_y), 1.);
+
+        // -d_hy.*n_x + d_hx.*n_y - alpha * d_ez
+        let flux_ez = blas::elemul_affine_(&d_hy, &n_x, -1., blas::elemul_affine(&d_hx, &n_y, 1., &d_ez, -alpha), 1.);
+
+        let flux_hx = blas::elemul_affine_(&d_ez, &n_y, 1., blas::elemul_affine_(&n_dot_dh, &n_x, 1., d_hx, -1.), alpha);
+
+        // -d_ez.*n_x + alpha(n_dot_dh.*n_y - d_hy)
+        let flux_hy = blas::elemul_affine_(&d_ez, &n_x, -1., blas::elemul_affine_(&n_dot_dh, &n_y, 1., d_hy, -1.), alpha);
 
         EH {
             Ez: flux_ez,

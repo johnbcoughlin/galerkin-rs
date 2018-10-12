@@ -37,11 +37,10 @@ pub fn matrix_multiply(a: &Matrix<f64>, x: &Vector<f64>) -> Vector<f64> {
 /**
  * Computes alpha*a.*b + beta * c
  */
-pub fn elemul_affine(a: &Vector<f64>, b: &Vector<f64>, alpha: f64, c: &Vector<f64>, beta: f64) -> Vector<f64> {
+pub fn elemul_affine_(a: &Vector<f64>, b: &Vector<f64>, alpha: f64, mut y: Vector<f64>, beta: f64) -> Vector<f64> {
     assert_eq!(a.size(), b.size());
-    assert_eq!(a.size(), c.size());
+    assert_eq!(a.size(), y.size());
     let n = a.size() as i32;
-    let mut y = c.clone();
     unsafe {
         dgbmv(
             b'N',
@@ -60,6 +59,16 @@ pub fn elemul_affine(a: &Vector<f64>, b: &Vector<f64>, alpha: f64, c: &Vector<f6
         );
     }
     y
+}
+/**
+ * Computes alpha*a.*b + beta * c
+ */
+pub fn elemul_affine(a: &Vector<f64>, b: &Vector<f64>, alpha: f64, c: &Vector<f64>, beta: f64) -> Vector<f64> {
+    assert_eq!(a.size(), b.size());
+    assert_eq!(a.size(), c.size());
+    let n = a.size() as i32;
+    let mut y = c.clone();
+    elemul_affine_(a, b, alpha, y, beta)
 }
 
 /**
