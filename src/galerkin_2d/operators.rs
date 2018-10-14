@@ -150,8 +150,10 @@ pub fn grad(
 ) -> XYTuple<Vector<f64>> {
     let u_r = blas::matrix_multiply(&operators.d_r, u);
     let u_s = blas::matrix_multiply(&operators.d_s, u);
-    let u_x = blas::elemul(&local_metric.r_x, &u_r) + blas::elemul(&local_metric.s_x, &u_s);
-    let u_y = blas::elemul(&local_metric.r_y, &u_r) + blas::elemul(&local_metric.s_y, &u_s);
+    let u_x = blas::elemul_affine_(&local_metric.r_x, &u_r, 1.,
+                                   blas::elemul(&local_metric.s_x, &u_s), 1.);
+    let u_y = blas::elemul_affine_(&local_metric.r_y, &u_r, 1.,
+                                   blas::elemul(&local_metric.s_y, &u_s), 1.);
     XYTuple { x: u_x, y: u_y }
 }
 
@@ -165,6 +167,9 @@ pub fn curl_2d(
     let u_xs = blas::matrix_multiply(&operators.d_s, u_x);
     let u_yr = blas::matrix_multiply(&operators.d_r, u_y);
     let u_ys = blas::matrix_multiply(&operators.d_s, u_y);
-    blas::elemul(&u_yr, &local_metric.r_x) + blas::elemul(&u_ys, &local_metric.s_x)
-        - blas::elemul(&u_xr, &local_metric.r_y) - blas::elemul(&u_xs, &local_metric.s_y)
+    blas::vector_sub_(
+        blas::elemul_affine_(&u_yr, &local_metric.r_x, 1.,
+                             blas::elemul(&u_ys, &local_metric.s_x), 1.),
+        &blas::elemul_affine_(&u_xr, &local_metric.r_y, 1.,
+                              blas::elemul(&u_xs, &local_metric.s_y), 1.))
 }

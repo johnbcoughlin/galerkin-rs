@@ -8,7 +8,7 @@ use galerkin::galerkin_2d::unknowns::Unknown;
 use rulinalg::vector::Vector;
 use std::ops::{Add, Div, Mul, Neg, Sub};
 use std::fmt;
-use galerkin::blas::matrix_multiply;
+use galerkin::blas::{matrix_multiply, vector_add, vector_add_, vector_sub, vector_sub_};
 
 #[allow(non_snake_case)]
 #[derive(Debug, Clone, Copy)]
@@ -152,9 +152,9 @@ impl Add for EH {
 
     fn add(self, rhs: EH) -> EH {
         EH {
-            Ez: self.Ez + rhs.Ez,
-            Hx: self.Hx + rhs.Hx,
-            Hy: self.Hy + rhs.Hy,
+            Ez: vector_add_(&self.Ez, rhs.Ez),
+            Hx: vector_add_(&self.Hx, rhs.Hx),
+            Hy: vector_add_(&self.Hy, rhs.Hy),
         }
     }
 }
@@ -164,9 +164,9 @@ impl<'a> Add for &'a EH {
 
     fn add(self, rhs: &EH) -> EH {
         EH {
-            Ez: &self.Ez + &rhs.Ez,
-            Hx: &self.Hx + &rhs.Hx,
-            Hy: &self.Hy + &rhs.Hy,
+            Ez: vector_add(&self.Ez, &rhs.Ez),
+            Hx: vector_add(&self.Hx, &rhs.Hx),
+            Hy: vector_add(&self.Hy, &rhs.Hy),
         }
     }
 }
@@ -176,9 +176,9 @@ impl Sub for EH {
 
     fn sub(self, rhs: EH) -> EH {
         EH {
-            Ez: self.Ez - rhs.Ez,
-            Hx: self.Hx - rhs.Hx,
-            Hy: self.Hy - rhs.Hy,
+            Ez: vector_sub_(self.Ez, &rhs.Ez),
+            Hx: vector_sub_(self.Hx, &rhs.Hx),
+            Hy: vector_sub_(self.Hy, &rhs.Hy),
         }
     }
 }
@@ -188,9 +188,9 @@ impl<'a> Sub for &'a EH {
 
     fn sub(self, rhs: &EH) -> EH {
         EH {
-            Ez: &self.Ez - &rhs.Ez,
-            Hx: &self.Hx - &rhs.Hx,
-            Hy: &self.Hy - &rhs.Hy,
+            Ez: vector_sub(&self.Ez, &rhs.Ez),
+            Hx: vector_sub(&self.Hx, &rhs.Hx),
+            Hy: vector_sub(&self.Hy, &rhs.Hy),
         }
     }
 }

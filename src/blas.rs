@@ -8,6 +8,7 @@ extern crate rulinalg;
 use rulinalg::vector::Vector;
 use rulinalg::matrix::{Matrix, BaseMatrix, BaseMatrixMut};
 use blas::blas::{
+    daxpy,
     dgemv,
     dgbmv,
 };
@@ -103,6 +104,54 @@ pub fn elemul_scalar(a: &Vector<f64>, b: &Vector<f64>, alpha: f64) -> Vector<f64
  */
 pub fn elemul(a: &Vector<f64>, b: &Vector<f64>) -> Vector<f64> {
     elemul_scalar(a, b, 1.)
+}
+
+/**
+ * Computes a + b
+ */
+pub fn vector_add(a: &Vector<f64>, b: &Vector<f64>) -> Vector<f64> {
+    let mut y = b.clone();
+    vector_add_(a, y)
+}
+
+pub fn vector_add_(a: &Vector<f64>, mut b: Vector<f64>) -> Vector<f64> {
+    assert_eq!(a.size(), b.size());
+    let n = a.size() as i32;
+    unsafe {
+        daxpy(
+            n,
+            1.,
+            a.data().as_slice(),
+            1,
+            b.mut_data(),
+            1,
+        )
+    }
+    b
+}
+
+/**
+ * Computes a - b
+ */
+pub fn vector_sub(a: &Vector<f64>, b: &Vector<f64>) -> Vector<f64> {
+    let mut y = a.clone();
+    vector_sub_(y, b)
+}
+
+pub fn vector_sub_(mut a: Vector<f64>, b: &Vector<f64>) -> Vector<f64> {
+    assert_eq!(a.size(), b.size());
+    let n = a.size() as i32;
+    unsafe {
+        daxpy(
+            n,
+            -1.,
+            b.data().as_slice(),
+            1,
+            a.mut_data(),
+            1,
+        )
+    }
+    a
 }
 
 #[cfg(test)]

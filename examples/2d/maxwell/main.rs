@@ -28,7 +28,7 @@ use galerkin::functions::range_kutta::RKB;
 use galerkin::plot::plot3d::{Plotter3D, GnuplotPlotter3D};
 
 fn main() {
-    maxwell_2d_example(true, 10.0);
+    maxwell_2d_example(false, 10.0);
 }
 
 #[derive(Debug)]
