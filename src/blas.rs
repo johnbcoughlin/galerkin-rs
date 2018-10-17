@@ -1,3 +1,5 @@
+extern crate lapack_src;
+extern crate lapack;
 extern crate blas;
 #[cfg(target_os = "macos")]
 extern crate accelerate_src;
@@ -9,6 +11,7 @@ use rulinalg::vector::Vector;
 use rulinalg::matrix::{Matrix, BaseMatrix, BaseMatrixMut};
 use blas::blas::{
     daxpy,
+    dscal,
     dgemv,
     dgbmv,
 };
@@ -61,6 +64,7 @@ pub fn elemul_affine_(a: &Vector<f64>, b: &Vector<f64>, alpha: f64, mut y: Vecto
     }
     y
 }
+
 /**
  * Computes alpha*a.*b + beta * c
  */
@@ -152,6 +156,54 @@ pub fn vector_sub_(mut a: Vector<f64>, b: &Vector<f64>) -> Vector<f64> {
         )
     }
     a
+}
+
+/**
+ * Computes alpha * a + b
+ */
+pub fn vector_affine(a: &Vector<f64>, alpha: f64, b: &Vector<f64>) -> Vector<f64> {
+    let mut b = b.clone();
+    vector_affine_(a, alpha, b)
+}
+
+/**
+ * Computes alpha * a + b
+ */
+pub fn vector_affine_(a: &Vector<f64>, alpha: f64, mut b: Vector<f64>) -> Vector<f64> {
+    assert_eq!(a.size(), b.size());
+    let n = a.size() as i32;
+    unsafe {
+        daxpy(
+            n,
+            alpha,
+            a.data().as_slice(),
+            1,
+            b.mut_data(),
+            1,
+        )
+    }
+    b
+}
+
+/**
+ * Computes alpha * a
+ */
+pub fn vector_scale_(mut a: Vector<f64>, alpha: f64) -> Vector<f64> {
+    let n = a.size() as i32;
+    unsafe {
+        dscal(
+            n,
+            alpha,
+            a.mut_data(),
+            1,
+        )
+    }
+    a
+}
+
+pub fn vector_scale(a: &Vector<f64>, alpha: f64) -> Vector<f64> {
+    let mut x = a.clone();
+    vector_scale_(x, alpha)
 }
 
 #[cfg(test)]
