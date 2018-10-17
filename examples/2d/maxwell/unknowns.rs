@@ -8,7 +8,16 @@ use galerkin::galerkin_2d::unknowns::Unknown;
 use rulinalg::vector::Vector;
 use std::ops::{Add, Div, Mul, Neg, Sub};
 use std::fmt;
-use galerkin::blas::matrix_multiply;
+use galerkin::blas::{
+    matrix_multiply,
+    elemul,
+    vector_add,
+    vector_add_,
+    vector_sub,
+    vector_sub_,
+    vector_scale,
+    vector_scale_,
+};
 
 #[allow(non_snake_case)]
 #[derive(Debug, Clone, Copy)]
@@ -127,9 +136,9 @@ impl Neg for EH {
 
     fn neg(self: EH) -> EH {
         EH {
-            Ez: -self.Ez,
-            Hx: -self.Hx,
-            Hy: -self.Hy,
+            Ez: vector_scale_(self.Ez, -1.),
+            Hx: vector_scale_(self.Hx, -1.),
+            Hy: vector_scale_(self.Hy, -1.),
         }
     }
 }
@@ -140,9 +149,9 @@ impl<'a> Neg for &'a EH {
     fn neg(self: &'a EH) -> EH {
         EH {
             // Intellij Rust is getting this one wrong
-            Ez: -(&self.Ez),
-            Hx: -(&self.Hx),
-            Hy: -(&self.Hy),
+            Ez: vector_scale(&self.Ez, -1.),
+            Hx: vector_scale(&self.Hx, -1.),
+            Hy: vector_scale(&self.Hy, -1.),
         }
     }
 }
@@ -152,9 +161,9 @@ impl Add for EH {
 
     fn add(self, rhs: EH) -> EH {
         EH {
-            Ez: self.Ez + rhs.Ez,
-            Hx: self.Hx + rhs.Hx,
-            Hy: self.Hy + rhs.Hy,
+            Ez: vector_add_(&self.Ez, rhs.Ez),
+            Hx: vector_add_(&self.Hx, rhs.Hx),
+            Hy: vector_add_(&self.Hy, rhs.Hy),
         }
     }
 }
@@ -164,9 +173,9 @@ impl<'a> Add for &'a EH {
 
     fn add(self, rhs: &EH) -> EH {
         EH {
-            Ez: &self.Ez + &rhs.Ez,
-            Hx: &self.Hx + &rhs.Hx,
-            Hy: &self.Hy + &rhs.Hy,
+            Ez: vector_add(&self.Ez, &rhs.Ez),
+            Hx: vector_add(&self.Hx, &rhs.Hx),
+            Hy: vector_add(&self.Hy, &rhs.Hy),
         }
     }
 }
@@ -176,9 +185,9 @@ impl Sub for EH {
 
     fn sub(self, rhs: EH) -> EH {
         EH {
-            Ez: self.Ez - rhs.Ez,
-            Hx: self.Hx - rhs.Hx,
-            Hy: self.Hy - rhs.Hy,
+            Ez: vector_sub_(self.Ez, &rhs.Ez),
+            Hx: vector_sub_(self.Hx, &rhs.Hx),
+            Hy: vector_sub_(self.Hy, &rhs.Hy),
         }
     }
 }
@@ -188,9 +197,9 @@ impl<'a> Sub for &'a EH {
 
     fn sub(self, rhs: &EH) -> EH {
         EH {
-            Ez: &self.Ez - &rhs.Ez,
-            Hx: &self.Hx - &rhs.Hx,
-            Hy: &self.Hy - &rhs.Hy,
+            Ez: vector_sub(&self.Ez, &rhs.Ez),
+            Hx: vector_sub(&self.Hx, &rhs.Hx),
+            Hy: vector_sub(&self.Hy, &rhs.Hy),
         }
     }
 }
@@ -200,9 +209,9 @@ impl Mul<f64> for EH {
 
     fn mul(self, rhs: f64) -> Self {
         EH {
-            Ez: self.Ez * rhs,
-            Hx: self.Hx * rhs,
-            Hy: self.Hy * rhs,
+            Ez: vector_scale_(self.Ez, rhs),
+            Hx: vector_scale_(self.Hx, rhs),
+            Hy: vector_scale_(self.Hy, rhs),
         }
     }
 }
@@ -212,9 +221,9 @@ impl<'a> Mul<f64> for &'a EH {
 
     fn mul(self, rhs: f64) -> EH {
         EH {
-            Ez: &self.Ez * rhs,
-            Hx: &self.Hx * rhs,
-            Hy: &self.Hy * rhs,
+            Ez: vector_scale(&self.Ez, rhs),
+            Hx: vector_scale(&self.Hx, rhs),
+            Hy: vector_scale(&self.Hy, rhs),
         }
     }
 }
@@ -224,9 +233,9 @@ impl<'a> Mul<&'a Vector<f64>> for EH {
 
     fn mul(self, rhs: &Vector<f64>) -> EH {
         EH {
-            Ez: self.Ez.elemul(&rhs),
-            Hx: self.Hx.elemul(&rhs),
-            Hy: self.Hy.elemul(&rhs),
+            Ez: elemul(&self.Ez, rhs),
+            Hx: elemul(&self.Hx, rhs),
+            Hy: elemul(&self.Hy, rhs),
         }
     }
 }

@@ -26,9 +26,10 @@ use galerkin::galerkin_2d::operators::FaceLiftable;
 use galerkin::functions::range_kutta::RKA;
 use galerkin::functions::range_kutta::RKB;
 use galerkin::plot::plot3d::{Plotter3D, GnuplotPlotter3D};
+use galerkin::blas::*;
 
 fn main() {
-    maxwell_2d_example(true, 10.0);
+    maxwell_2d_example(false, 10.0);
 }
 
 #[derive(Debug)]
@@ -145,9 +146,9 @@ fn maxwell_rhs_2d<'grid>(
         &elt.local_metric,
     );
 
-    let Hx = -grad_ez.y + flux.Hx / 2.0;
-    let Hy = grad_ez.x + flux.Hy / 2.0;
-    let Ez = curl_h + flux.Ez / 2.0;
+    let Hx = vector_affine_(&flux.Hx, 0.5, -grad_ez.y);
+    let Hy = vector_affine_(&flux.Hy, 0.5, grad_ez.x);
+    let Ez = vector_affine_(&flux.Ez, 0.5, curl_h);
 
     EH {
         Hx,
