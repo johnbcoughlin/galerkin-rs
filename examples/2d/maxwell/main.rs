@@ -1,4 +1,5 @@
 #![feature(test)]
+#[macro_use]
 extern crate galerkin;
 extern crate rulinalg;
 extern crate test;
@@ -29,7 +30,7 @@ use galerkin::plot::plot3d::{Plotter3D, GnuplotPlotter3D};
 use galerkin::blas::*;
 
 fn main() {
-    maxwell_2d_example(false, 10.0);
+    maxwell_2d_example(true, 10.0);
 }
 
 #[derive(Debug)]

@@ -176,3 +176,138 @@ pub fn communicate<GS>(
         storage.u_face3_plus.replace(face3_plus);
     }
 }
+
+#[macro_export]
+macro_rules! unknown_from_vector_fields {
+    ($U:ident, $($field:ident),*) => {
+//        use $crate::blas::{
+//            matrix_multiply,
+//            elemul,
+//            vector_add,
+//            vector_add_,
+//            vector_sub,
+//            vector_sub_,
+//            vector_scale,
+//            vector_scale_,
+//        };
+        // Define the struct to consist of vector fields
+        #[allow(non_snake_case)]
+        #[derive(Debug)]
+        pub struct $U { $(pub $field: Vector<f64>, )* }
+
+        // Implement the Unknown trait
+        impl Unknown for $U {
+            type Line = $U;
+
+            fn edge_1(&self, reference_element: &ReferenceElement) -> Self::Line {
+                $U { $($field: self.$field.select(reference_element.face1.as_slice()), )* }
+            }
+
+            fn edge_2(&self, reference_element: &ReferenceElement) -> Self::Line {
+                $U { $($field: self.$field.select(reference_element.face2.as_slice()), )* }
+            }
+
+            fn edge_3(&self, reference_element: &ReferenceElement) -> Self::Line {
+                $U { $($field: self.$field.select(reference_element.face3.as_slice()), )* }
+            }
+
+            fn zero(reference_element: &ReferenceElement) -> Self {
+                use rulinalg::vector::Vector;
+                $U { $($field: Vector::zeros(reference_element.n_p), )* }
+            }
+
+            fn face1_zero(reference_element: &ReferenceElement) -> Self::Line {
+                use rulinalg::vector::Vector;
+                $U { $($field: Vector::zeros(reference_element.face1.len()), )* }
+            }
+
+            fn face2_zero(reference_element: &ReferenceElement) -> Self::Line {
+                use rulinalg::vector::Vector;
+                $U { $($field: Vector::zeros(reference_element.face2.len()), )* }
+            }
+
+            fn face3_zero(reference_element: &ReferenceElement) -> Self::Line {
+                use rulinalg::vector::Vector;
+                $U { $($field: Vector::zeros(reference_element.face3.len()), )* }
+            }
+        }
+
+        // Implement arithmetic traits
+        impl Neg for $U {
+            type Output = $U;
+            fn neg(self: $U) -> $U {
+                $U { $($field: $crate::blas::vector_scale_(self.$field, -1.), )* }
+            }
+        }
+
+        impl<'a> Neg for &'a $U {
+            type Output = $U;
+            fn neg(self: &'a $U) -> $U {
+                $U { $($field: $crate::blas::vector_scale(&self.$field, -1.), )* }
+            }
+        }
+
+        impl Add for $U {
+            type Output = $U;
+            fn add(self, rhs: $U) -> $U {
+                $U { $($field: $crate::blas::vector_add_(&self.$field, rhs.$field), )* }
+            }
+        }
+
+        impl<'a> Add for &'a $U {
+            type Output = $U;
+            fn add(self, rhs: &$U) -> $U {
+                $U { $($field: $crate::blas::vector_add(&self.$field, &rhs.$field), )* }
+            }
+        }
+
+        impl Sub for $U {
+            type Output = $U;
+            fn sub(self, rhs: $U) -> $U {
+                $U { $($field: $crate::blas::vector_sub_(self.$field, &rhs.$field), )* }
+            }
+        }
+
+        impl<'a> Sub for &'a $U {
+            type Output = $U;
+            fn sub(self, rhs: &$U) -> $U {
+                $U { $($field: $crate::blas::vector_sub(&self.$field, &rhs.$field), )* }
+            }
+        }
+
+        impl Mul<f64> for $U {
+            type Output = $U;
+            fn mul(self, rhs: f64) -> Self {
+                $U { $($field: $crate::blas::vector_scale_(self.$field, rhs), )* }
+            }
+        }
+
+        impl<'a> Mul<f64> for &'a $U {
+            type Output = $U;
+            fn mul(self, rhs: f64) -> $U {
+                $U { $($field: $crate::blas::vector_scale(&self.$field, rhs), )* }
+            }
+        }
+
+        impl<'a> Mul<&'a Vector<f64>> for $U {
+            type Output = $U;
+            fn mul(self, rhs: &Vector<f64>) -> $U {
+                $U { $($field: $crate::blas::elemul(&self.$field, rhs), )* }
+            }
+        }
+
+        impl Div<f64> for $U {
+            type Output = $U;
+            fn div(self, rhs: f64) -> Self {
+                $U { $($field: self.$field / rhs, )* }
+            }
+        }
+
+        impl<'a> Div<f64> for &'a $U {
+            type Output = $U;
+            fn div(self, rhs: f64) -> $U {
+                $U { $($field: &self.$field / rhs, )* }
+            }
+        }
+    }
+}

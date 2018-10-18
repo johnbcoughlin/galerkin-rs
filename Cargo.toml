@@ -55,3 +55,7 @@ path = "examples/1d/maxwell.rs"
 [[bin]]
 name = "maxwell-2d"
 path = "examples/2d/maxwell/main.rs"
+
+[[bin]]
+name = "euler-2d"
+path = "examples/2d/euler/main.rs"
