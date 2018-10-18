@@ -6,25 +6,18 @@ use galerkin_2d::reference_element::ReferenceElement;
 use rulinalg::vector::Vector;
 use std::cell::RefCell;
 use std::fmt;
-use std::ops::{Add, Div, Mul, Neg};
 use std::ops::Sub;
+use std::ops::{Add, Div, Mul, Neg};
 
 pub trait Unknown
-    where
-        Self::Line: Neg<Output=Self::Line>
-        + Add<Output=Self::Line>
-        + Sub<Output=Self::Line>
-        + Mul<f64, Output=Self::Line>
-        + for<'a> Mul<&'a Vector<f64>, Output=Self::Line>
-        + Div<f64, Output=Self::Line>
+where
+    Self::Line: Neg<Output = Self::Line>
+        + Add<Output = Self::Line>
+        + Sub<Output = Self::Line>
+        + Mul<f64, Output = Self::Line>
+        + for<'a> Mul<&'a Vector<f64>, Output = Self::Line>
+        + Div<f64, Output = Self::Line>
         + fmt::Debug,
-//        for<'a> &'a Self::Line: Neg<Output=Self::Line>
-//        + Add<Output=Self::Line>
-//        + Sub<Output=Self::Line>
-//        + Mul<f64, Output=Self::Line>
-//        + Div<f64, Output=Self::Line>
-//        + fmt::Debug,
-
 {
     type Line;
 
@@ -56,9 +49,9 @@ pub fn initialize_storage<GS, Fx>(
     reference_element: &ReferenceElement,
     grid: &Grid<GS>,
 ) -> Vec<ElementStorage<GS>>
-    where
-        GS: GalerkinScheme,
-        Fx: Fn(&Vector<f64>, &Vector<f64>) -> GS::U,
+where
+    GS: GalerkinScheme,
+    Fx: Fn(&Vector<f64>, &Vector<f64>) -> GS::U,
 {
     let mut result: Vec<ElementStorage<GS>> = vec![];
     for (i, elt) in grid.elements.iter().enumerate() {
@@ -69,10 +62,7 @@ pub fn initialize_storage<GS, Fx>(
                     .spatial_parameters
                     .face(face_number, reference_element),
             ),
-            FaceType::Boundary(_, f) => (
-                elt.spatial_parameters.edge_1(reference_element),
-                f()
-            ),
+            FaceType::Boundary(_, f) => (elt.spatial_parameters.edge_1(reference_element), f()),
         };
         let (f_face2_minus, f_face2_plus) = match elt.face2.face_type {
             FaceType::Interior(j, face_number) => (
@@ -81,10 +71,7 @@ pub fn initialize_storage<GS, Fx>(
                     .spatial_parameters
                     .face(face_number, reference_element),
             ),
-            FaceType::Boundary(_, f) => (
-                elt.spatial_parameters.edge_2(reference_element),
-                f()
-            ),
+            FaceType::Boundary(_, f) => (elt.spatial_parameters.edge_2(reference_element), f()),
         };
         let (f_face3_minus, f_face3_plus) = match elt.face3.face_type {
             FaceType::Interior(j, face_number) => (
@@ -93,10 +80,7 @@ pub fn initialize_storage<GS, Fx>(
                     .spatial_parameters
                     .face(face_number, reference_element),
             ),
-            FaceType::Boundary(_, f) => (
-                elt.spatial_parameters.edge_3(reference_element),
-                f()
-            ),
+            FaceType::Boundary(_, f) => (elt.spatial_parameters.edge_3(reference_element), f()),
         };
         result.push(ElementStorage {
             u_k: u_0(&elt.x_k, &elt.y_k),
@@ -139,7 +123,7 @@ pub fn communicate<GS>(
             }
             FaceType::Boundary(bc, _) => {
                 // minus is interior, plus is neighbor
-                (face1, bc(t))
+                (face1, bc(t, &elt.x_k, &elt.y_k))
             }
         };
         storage.u_face1_minus.replace(face1_minus);
@@ -154,7 +138,7 @@ pub fn communicate<GS>(
             }
             FaceType::Boundary(bc, _) => {
                 // minus is interior, plus is neighbor
-                (face2, bc(t))
+                (face2, bc(t, &elt.x_k, &elt.y_k))
             }
         };
         storage.u_face2_minus.replace(face2_minus);
@@ -169,7 +153,7 @@ pub fn communicate<GS>(
             }
             FaceType::Boundary(bc, _) => {
                 // minus is interior, plus is neighbor
-                (face3, bc(t))
+                (face3, bc(t, &elt.x_k, &elt.y_k))
             }
         };
         storage.u_face3_minus.replace(face3_minus);
@@ -180,17 +164,6 @@ pub fn communicate<GS>(
 #[macro_export]
 macro_rules! unknown_from_vector_fields {
     ($U:ident, $($field:ident),*) => {
-//        use $crate::blas::{
-//            matrix_multiply,
-//            elemul,
-//            vector_add,
-//            vector_add_,
-//            vector_sub,
-//            vector_sub_,
-//            vector_scale,
-//            vector_scale_,
-//        };
-        // Define the struct to consist of vector fields
         #[allow(non_snake_case)]
         #[derive(Debug)]
         pub struct $U { $(pub $field: Vector<f64>, )* }

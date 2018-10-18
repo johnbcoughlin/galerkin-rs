@@ -1,10 +1,10 @@
-extern crate lapack_src;
-extern crate lapack;
 #[cfg(target_os = "macos")]
 extern crate accelerate_src;
+extern crate lapack;
+extern crate lapack_src;
+extern crate num;
 #[cfg(target_os = "linux")]
 extern crate openblas_src;
-extern crate num;
 extern crate rulinalg;
 
 use self::lapack::*;

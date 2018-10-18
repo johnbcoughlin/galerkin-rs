@@ -4,9 +4,9 @@ use self::rulinalg::matrix::{BaseMatrix, Matrix};
 use self::rulinalg::vector::Vector;
 use functions::jacobi_polynomials;
 use functions::vandermonde;
+use galerkin_2d::grid::FaceNumber;
 use std::f64::consts::PI;
 use std::iter::FromIterator;
-use galerkin_2d::grid::FaceNumber;
 
 const ALPHAS: [f64; 15] = [
     0.0000, 0.0000, 1.4152, 0.1001, 0.2751, 0.9800, 1.0999, 1.2832, 1.3648, 1.4773, 1.4959, 1.5743,
@@ -137,9 +137,17 @@ impl ReferenceElement {
     }
 
     pub fn rs_to_ab(rs: &Vector<f64>, ss: &Vector<f64>) -> (Vector<f64>, Vector<f64>) {
-        let a: Vector<f64> = rs.iter().zip(ss.iter()).map(|(&r, &s)| {
-            if (s - 1.).abs() > 1.0e-20 { 2. * (r + 1.) / (1. - s) - 1. } else { -1. }
-        }).collect();
+        let a: Vector<f64> = rs
+            .iter()
+            .zip(ss.iter())
+            .map(|(&r, &s)| {
+                if (s - 1.).abs() > 1.0e-20 {
+                    2. * (r + 1.) / (1. - s) - 1.
+                } else {
+                    -1.
+                }
+            })
+            .collect();
         let b = ss.clone();
         (a, b)
     }

@@ -7,9 +7,9 @@ extern crate gnuplot;
 #[macro_use]
 pub mod testing;
 
+pub mod blas;
 pub mod distmesh;
 pub mod functions;
 pub mod galerkin_1d;
 pub mod galerkin_2d;
 pub mod plot;
-pub mod blas;

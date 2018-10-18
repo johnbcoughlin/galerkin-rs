@@ -2,7 +2,6 @@ extern crate galerkin;
 #[macro_use]
 extern crate rulinalg;
 
-use std::ops::{Add, Div, Mul, Neg};
 use galerkin::functions::range_kutta::{RKA, RKB, RKC};
 use galerkin::galerkin_1d::flux::{FluxEnum, FluxScheme, NumericalFlux, Side};
 use galerkin::galerkin_1d::galerkin::compute_flux;
@@ -15,6 +14,7 @@ use galerkin::galerkin_1d::unknowns::{communicate, initialize_storage, Unknown};
 use rulinalg::vector::Vector;
 use std::f64::consts;
 use std::iter::repeat;
+use std::ops::{Add, Div, Mul, Neg};
 
 fn main() {
     maxwell_1d_example();
@@ -303,8 +303,7 @@ fn maxwell_1d<Fx>(
 
                 let (residuals_e, residuals_h) = {
                     let (residuals_e, residuals_h) = &(residuals[elt.index as usize]);
-                    let (rhs_e, rhs_h) =
-                        maxwell_rhs_1d(&elt, &storage, &operators);
+                    let (rhs_e, rhs_h) = maxwell_rhs_1d(&elt, &storage, &operators);
                     (
                         residuals_e * RKA[int_rk] + rhs_e * dt,
                         residuals_h * RKA[int_rk] + rhs_h * dt,
