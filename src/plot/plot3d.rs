@@ -11,9 +11,7 @@ use std::thread;
 use std::time::Duration;
 
 pub trait Plotter3D {
-    fn create(x_min: f64, x_max: f64,
-              y_min: f64, y_max: f64,
-              z_min: f64, z_max: f64) -> Self;
+    fn create(x_min: f64, x_max: f64, y_min: f64, y_max: f64, z_min: f64, z_max: f64) -> Self;
 
     fn header(&mut self);
 
@@ -28,13 +26,22 @@ pub struct GnuplotPlotter3D {
 }
 
 impl GnuplotPlotter3D {
-    fn begin_plotting(&mut self, x_min: f64, x_max: f64, y_min: f64, y_max: f64,
-                      z_min: f64, z_max: f64) {
+    fn begin_plotting(
+        &mut self,
+        x_min: f64,
+        x_max: f64,
+        y_min: f64,
+        y_max: f64,
+        z_min: f64,
+        z_max: f64,
+    ) {
         let mut stdin = (&mut self.gnuplot.stdin).as_mut().expect("No stdin");
         writeln!(stdin, "set xrange [{}:{}]", x_min, x_max);
         writeln!(stdin, "set yrange [{}:{}]", y_min, y_max);
         writeln!(stdin, "set zrange [{}:{}]", z_min, z_max);
-        writeln!(stdin, "set dgrid3d 30,30");
+        writeln!(stdin, "set dgrid3d 100,100");
+        writeln!(stdin, "set style data lines");
+        writeln!(stdin, "set pm3d");
         writeln!(stdin, "set hidden3d");
         writeln!(
             stdin,
@@ -42,12 +49,17 @@ impl GnuplotPlotter3D {
             self.path.to_str().unwrap()
         );
     }
-
 }
 
 impl Plotter3D for GnuplotPlotter3D {
-    fn create(x_min: f64, x_max: f64, y_min: f64, y_max: f64,
-                  z_min: f64, z_max: f64) -> GnuplotPlotter3D {
+    fn create(
+        x_min: f64,
+        x_max: f64,
+        y_min: f64,
+        y_max: f64,
+        z_min: f64,
+        z_max: f64,
+    ) -> GnuplotPlotter3D {
         let dir = tempdir()
             .expect("could not open temporary directory")
             .into_path();
@@ -101,7 +113,4 @@ impl Plotter3D for GnuplotPlotter3D {
     }
 }
 
-
-struct GliumPlotter3D {
-
-}
+struct GliumPlotter3D {}

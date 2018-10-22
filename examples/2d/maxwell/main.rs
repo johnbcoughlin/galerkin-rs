@@ -1,4 +1,5 @@
 #![feature(test)]
+#[macro_use]
 extern crate galerkin;
 extern crate rulinalg;
 extern crate test;
@@ -6,30 +7,30 @@ extern crate test;
 mod flux;
 mod unknowns;
 
-use std::f64::consts;
+use flux::*;
+use galerkin::blas::*;
 use galerkin::distmesh::distmesh_2d::unit_square;
+use galerkin::functions::range_kutta::RKA;
+use galerkin::functions::range_kutta::RKB;
 use galerkin::galerkin_2d::flux::compute_flux;
 use galerkin::galerkin_2d::galerkin::GalerkinScheme;
 use galerkin::galerkin_2d::grid::Element;
+use galerkin::galerkin_2d::grid::ElementStorage;
 use galerkin::galerkin_2d::grid::{assemble_grid, Grid};
-use flux::*;
-use unknowns::*;
 use galerkin::galerkin_2d::operators::curl_2d;
 use galerkin::galerkin_2d::operators::grad;
+use galerkin::galerkin_2d::operators::FaceLiftable;
 use galerkin::galerkin_2d::operators::{assemble_operators, Operators};
 use galerkin::galerkin_2d::reference_element::ReferenceElement;
 use galerkin::galerkin_2d::unknowns::{communicate, initialize_storage, Unknown};
+use galerkin::plot::plot3d::{GnuplotPlotter3D, Plotter3D};
 use rulinalg::vector::Vector;
+use std::f64::consts;
 use std::iter::repeat_with;
-use galerkin::galerkin_2d::grid::ElementStorage;
-use galerkin::galerkin_2d::operators::FaceLiftable;
-use galerkin::functions::range_kutta::RKA;
-use galerkin::functions::range_kutta::RKB;
-use galerkin::plot::plot3d::{Plotter3D, GnuplotPlotter3D};
-use galerkin::blas::*;
+use unknowns::*;
 
 fn main() {
-    maxwell_2d_example(false, 10.0);
+    maxwell_2d_example(true, 10.0);
 }
 
 #[derive(Debug)]
@@ -54,18 +55,19 @@ pub fn maxwell_2d<'grid, Fx>(
 ) where
     Fx: Fn(&Vector<f64>, &Vector<f64>) -> EH,
 {
-    let mut plotter = if plot { Some(GnuplotPlotter3D::create(-1., 1., -1., 1., -1., 1.)) } else { None };
+    let mut plotter = if plot {
+        Some(GnuplotPlotter3D::create(-1., 1., -1., 1., -1., 1.))
+    } else {
+        None
+    };
 
     let dt: f64 = 0.003668181816046;
     let n_t = (final_time / dt).ceil() as i32;
 
     let mut t: f64 = 0.0;
 
-    let mut storage: Vec<ElementStorage<Maxwell2D>> = initialize_storage(
-        u_0,
-        reference_element,
-        grid,
-    );
+    let mut storage: Vec<ElementStorage<Maxwell2D>> =
+        initialize_storage(u_0, reference_element, grid);
 
     let mut residuals: Vec<EH> = repeat_with(|| EH::zero(reference_element))
         .take(grid.elements.len())
@@ -97,7 +99,7 @@ pub fn maxwell_2d<'grid, Fx>(
         t = t + dt;
         if epoch % 20 == 0 {
             match plotter {
-                None => {},
+                None => {}
                 Some(ref mut plotter) => {
                     plotter.header();
                     for elt in (*grid).elements.iter() {
@@ -105,7 +107,7 @@ pub fn maxwell_2d<'grid, Fx>(
                         plotter.plot(&elt.x_k, &elt.y_k, &storage.u_k.Ez);
                     }
                     plotter.replot();
-                },
+                }
             }
         }
     }
@@ -127,18 +129,13 @@ fn maxwell_rhs_2d<'grid>(
     );
 
     if elt.index == 0 {
-//        println!("flux: {}", flux);
-//        println!("current_value: {}", elt_storage.u_k);
+        //        println!("flux: {}", flux);
+        //        println!("current_value: {}", elt_storage.u_k);
     }
 
+    //    println!("{:?}", elt.local_metric.jacobian);
 
-//    println!("{:?}", elt.local_metric.jacobian);
-
-    let grad_ez = grad(
-        &elt_storage.u_k.Ez,
-        operators,
-        &elt.local_metric,
-    );
+    let grad_ez = grad(&elt_storage.u_k.Ez, operators, &elt.local_metric);
     let curl_h = curl_2d(
         &elt_storage.u_k.Hx,
         &elt_storage.u_k.Hy,
@@ -150,11 +147,7 @@ fn maxwell_rhs_2d<'grid>(
     let Hy = vector_affine_(&flux.Hy, 0.5, grad_ez.x);
     let Ez = vector_affine_(&flux.Ez, 0.5, curl_h);
 
-    EH {
-        Hx,
-        Hy,
-        Ez,
-    }
+    EH { Hx, Hy, Ez }
 }
 
 pub fn maxwell_2d_example(plot: bool, final_time: f64) {
@@ -162,7 +155,7 @@ pub fn maxwell_2d_example(plot: bool, final_time: f64) {
     let reference_element = ReferenceElement::legendre(n_p);
     let operators = assemble_operators(&reference_element);
     let mesh = unit_square();
-    let boundary_condition = |_| EH::face1_zero(&reference_element);
+    let boundary_condition = |_t: f64, _x: &Vector<f64>, _y: &Vector<f64>| EH::face1_zero(&reference_element);
     let grid: Grid<Maxwell2D> = assemble_grid(
         &reference_element,
         &operators,
@@ -174,8 +167,15 @@ pub fn maxwell_2d_example(plot: bool, final_time: f64) {
         MaxwellFluxType::Exterior,
     );
 
-//    println!("{}", operators.lift);
-    maxwell_2d(&grid, &reference_element, &operators, &exact_cavity_solution_eh0, plot, final_time);
+    //    println!("{}", operators.lift);
+    maxwell_2d(
+        &grid,
+        &reference_element,
+        &operators,
+        &exact_cavity_solution_eh0,
+        plot,
+        final_time,
+    );
 }
 
 #[allow(non_snake_case)]
@@ -183,21 +183,23 @@ fn exact_cavity_solution_eh0(xs: &Vector<f64>, ys: &Vector<f64>) -> EH {
     let pi = consts::PI;
     let omega = pi * consts::SQRT_2;
     let t = 0.;
-    let Hx: Vector<f64> = xs.iter().zip(ys.iter()).map(|(&x, &y)| {
-        -pi / omega * (pi * x).sin() * (pi * y).cos() * (omega * t).sin()
-    }).collect();
-    let Hy: Vector<f64> = xs.iter().zip(ys.iter()).map(|(&x, &y)| {
-        pi / omega * (pi * x).cos() * (pi * y).sin() * (omega * t).sin()
-    }).collect();
-    let Ez: Vector<f64> = xs.iter().zip(ys.iter()).map(|(&x, &y)| {
-        (pi * x).sin() * (pi * y).sin() * (omega * t).cos()
-    }).collect();
+    let Hx: Vector<f64> = xs
+        .iter()
+        .zip(ys.iter())
+        .map(|(&x, &y)| -pi / omega * (pi * x).sin() * (pi * y).cos() * (omega * t).sin())
+        .collect();
+    let Hy: Vector<f64> = xs
+        .iter()
+        .zip(ys.iter())
+        .map(|(&x, &y)| pi / omega * (pi * x).cos() * (pi * y).sin() * (omega * t).sin())
+        .collect();
+    let Ez: Vector<f64> = xs
+        .iter()
+        .zip(ys.iter())
+        .map(|(&x, &y)| (pi * x).sin() * (pi * y).sin() * (omega * t).cos())
+        .collect();
 
-    EH {
-        Hx,
-        Hy,
-        Ez,
-    }
+    EH { Hx, Hy, Ez }
 }
 
 #[cfg(test)]
@@ -213,7 +215,7 @@ mod tests {
         let reference_element = ReferenceElement::legendre(n_p);
         let operators = assemble_operators(&reference_element);
         let mesh = unit_square();
-        let boundary_condition = |_| EH::face1_zero(&reference_element);
+        let boundary_condition = |_t: f64, _x: &Vector<f64>, _y: &Vector<f64>| EH::face1_zero(&reference_element);
         let grid: Grid<Maxwell2D> = assemble_grid(
             &reference_element,
             &operators,
@@ -225,7 +227,15 @@ mod tests {
             MaxwellFluxType::Exterior,
         );
 
-        b.iter(|| maxwell_2d(&grid, &reference_element, &operators,
-                             &exact_cavity_solution_eh0, false, 0.01));
+        b.iter(|| {
+            maxwell_2d(
+                &grid,
+                &reference_element,
+                &operators,
+                &exact_cavity_solution_eh0,
+                false,
+                0.01,
+            )
+        });
     }
 }

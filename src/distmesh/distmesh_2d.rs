@@ -19,6 +19,13 @@ pub fn unit_square() -> Mesh {
     )
 }
 
+pub fn isentropic_vortex() -> Mesh {
+    parse_distmesh_2d(
+        include_str!("../../static/meshes_2d/isentropic_vortex_points"),
+        include_str!("../../static/meshes_2d/isentropic_vortex_triangles"),
+    )
+}
+
 pub fn parse_distmesh_2d(points_file: &str, triangles_file: &str) -> Mesh {
     let points = points_file
         .split("\n")

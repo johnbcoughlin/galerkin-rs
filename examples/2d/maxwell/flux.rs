@@ -1,13 +1,13 @@
 extern crate galerkin;
 extern crate rulinalg;
 
+use galerkin::blas;
 use galerkin::galerkin_2d::flux::{FluxKey, FluxScheme, Side};
 use galerkin::galerkin_2d::grid::SpatialVariable;
 use galerkin::galerkin_2d::grid::Vec2;
 use galerkin::galerkin_2d::reference_element::ReferenceElement;
 use rulinalg::vector::Vector;
-use unknowns::{EH};
-use galerkin::blas;
+use unknowns::EH;
 
 #[derive(Debug, Clone, Copy)]
 pub struct Null();
@@ -87,12 +87,30 @@ impl Vacuum {
         let n_dot_dh = blas::elemul_affine_(&d_hx, &n_x, 1., blas::elemul(&d_hy, &n_y), 1.);
 
         // -d_hy.*n_x + d_hx.*n_y - alpha * d_ez
-        let flux_ez = blas::elemul_affine_(&d_hy, &n_x, -1., blas::elemul_affine(&d_hx, &n_y, 1., &d_ez, -alpha), 1.);
+        let flux_ez = blas::elemul_affine_(
+            &d_hy,
+            &n_x,
+            -1.,
+            blas::elemul_affine(&d_hx, &n_y, 1., &d_ez, -alpha),
+            1.,
+        );
 
-        let flux_hx = blas::elemul_affine_(&d_ez, &n_y, 1., blas::elemul_affine_(&n_dot_dh, &n_x, 1., d_hx, -1.), alpha);
+        let flux_hx = blas::elemul_affine_(
+            &d_ez,
+            &n_y,
+            1.,
+            blas::elemul_affine_(&n_dot_dh, &n_x, 1., d_hx, -1.),
+            alpha,
+        );
 
         // -d_ez.*n_x + alpha(n_dot_dh.*n_y - d_hy)
-        let flux_hy = blas::elemul_affine_(&d_ez, &n_x, -1., blas::elemul_affine_(&n_dot_dh, &n_y, 1., d_hy, -1.), alpha);
+        let flux_hy = blas::elemul_affine_(
+            &d_ez,
+            &n_x,
+            -1.,
+            blas::elemul_affine_(&n_dot_dh, &n_y, 1., d_hy, -1.),
+            alpha,
+        );
 
         EH {
             Ez: flux_ez,
@@ -116,8 +134,12 @@ impl FluxScheme<EH> for Vacuum {
         outward_normal_y: &Vector<f64>,
     ) -> EH {
         match key {
-            MaxwellFluxType::Interior => Vacuum::interior_flux(minus, plus, outward_normal_x, outward_normal_y),
-            MaxwellFluxType::Exterior => Vacuum::exterior_flux(minus, plus, outward_normal_x, outward_normal_y),
+            MaxwellFluxType::Interior => {
+                Vacuum::interior_flux(minus, plus, outward_normal_x, outward_normal_y)
+            }
+            MaxwellFluxType::Exterior => {
+                Vacuum::exterior_flux(minus, plus, outward_normal_x, outward_normal_y)
+            }
         }
     }
 }

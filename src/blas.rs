@@ -1,20 +1,15 @@
-extern crate lapack_src;
-extern crate lapack;
-extern crate blas;
 #[cfg(target_os = "macos")]
 extern crate accelerate_src;
+extern crate blas;
+extern crate lapack;
+extern crate lapack_src;
 #[cfg(target_os = "linux")]
 extern crate openblas_src;
 extern crate rulinalg;
 
+use blas::blas::{daxpy, dgbmv, dgemv, dscal};
+use rulinalg::matrix::{BaseMatrix, BaseMatrixMut, Matrix};
 use rulinalg::vector::Vector;
-use rulinalg::matrix::{Matrix, BaseMatrix, BaseMatrixMut};
-use blas::blas::{
-    daxpy,
-    dscal,
-    dgemv,
-    dgbmv,
-};
 
 pub fn matrix_multiply(a: &Matrix<f64>, x: &Vector<f64>) -> Vector<f64> {
     let m = a.cols() as i32;
@@ -32,7 +27,7 @@ pub fn matrix_multiply(a: &Matrix<f64>, x: &Vector<f64>) -> Vector<f64> {
             1,
             0.,
             y.mut_data(),
-            1
+            1,
         );
     }
     y
@@ -41,7 +36,13 @@ pub fn matrix_multiply(a: &Matrix<f64>, x: &Vector<f64>) -> Vector<f64> {
 /**
  * Computes alpha*a.*b + beta * c
  */
-pub fn elemul_affine_(a: &Vector<f64>, b: &Vector<f64>, alpha: f64, mut y: Vector<f64>, beta: f64) -> Vector<f64> {
+pub fn elemul_affine_(
+    a: &Vector<f64>,
+    b: &Vector<f64>,
+    alpha: f64,
+    mut y: Vector<f64>,
+    beta: f64,
+) -> Vector<f64> {
     assert_eq!(a.size(), b.size());
     assert_eq!(a.size(), y.size());
     let n = a.size() as i32;
@@ -59,7 +60,7 @@ pub fn elemul_affine_(a: &Vector<f64>, b: &Vector<f64>, alpha: f64, mut y: Vecto
             1,
             beta,
             y.mut_data(),
-            1
+            1,
         );
     }
     y
@@ -68,7 +69,13 @@ pub fn elemul_affine_(a: &Vector<f64>, b: &Vector<f64>, alpha: f64, mut y: Vecto
 /**
  * Computes alpha*a.*b + beta * c
  */
-pub fn elemul_affine(a: &Vector<f64>, b: &Vector<f64>, alpha: f64, c: &Vector<f64>, beta: f64) -> Vector<f64> {
+pub fn elemul_affine(
+    a: &Vector<f64>,
+    b: &Vector<f64>,
+    alpha: f64,
+    c: &Vector<f64>,
+    beta: f64,
+) -> Vector<f64> {
     assert_eq!(a.size(), b.size());
     assert_eq!(a.size(), c.size());
     let n = a.size() as i32;
@@ -97,7 +104,7 @@ pub fn elemul_scalar(a: &Vector<f64>, b: &Vector<f64>, alpha: f64) -> Vector<f64
             1,
             0.,
             y.mut_data(),
-            1
+            1,
         );
     }
     y
@@ -121,16 +128,7 @@ pub fn vector_add(a: &Vector<f64>, b: &Vector<f64>) -> Vector<f64> {
 pub fn vector_add_(a: &Vector<f64>, mut b: Vector<f64>) -> Vector<f64> {
     assert_eq!(a.size(), b.size());
     let n = a.size() as i32;
-    unsafe {
-        daxpy(
-            n,
-            1.,
-            a.data().as_slice(),
-            1,
-            b.mut_data(),
-            1,
-        )
-    }
+    unsafe { daxpy(n, 1., a.data().as_slice(), 1, b.mut_data(), 1) }
     b
 }
 
@@ -145,16 +143,7 @@ pub fn vector_sub(a: &Vector<f64>, b: &Vector<f64>) -> Vector<f64> {
 pub fn vector_sub_(mut a: Vector<f64>, b: &Vector<f64>) -> Vector<f64> {
     assert_eq!(a.size(), b.size());
     let n = a.size() as i32;
-    unsafe {
-        daxpy(
-            n,
-            -1.,
-            b.data().as_slice(),
-            1,
-            a.mut_data(),
-            1,
-        )
-    }
+    unsafe { daxpy(n, -1., b.data().as_slice(), 1, a.mut_data(), 1) }
     a
 }
 
@@ -172,16 +161,7 @@ pub fn vector_affine(a: &Vector<f64>, alpha: f64, b: &Vector<f64>) -> Vector<f64
 pub fn vector_affine_(a: &Vector<f64>, alpha: f64, mut b: Vector<f64>) -> Vector<f64> {
     assert_eq!(a.size(), b.size());
     let n = a.size() as i32;
-    unsafe {
-        daxpy(
-            n,
-            alpha,
-            a.data().as_slice(),
-            1,
-            b.mut_data(),
-            1,
-        )
-    }
+    unsafe { daxpy(n, alpha, a.data().as_slice(), 1, b.mut_data(), 1) }
     b
 }
 
@@ -190,14 +170,7 @@ pub fn vector_affine_(a: &Vector<f64>, alpha: f64, mut b: Vector<f64>) -> Vector
  */
 pub fn vector_scale_(mut a: Vector<f64>, alpha: f64) -> Vector<f64> {
     let n = a.size() as i32;
-    unsafe {
-        dscal(
-            n,
-            alpha,
-            a.mut_data(),
-            1,
-        )
-    }
+    unsafe { dscal(n, alpha, a.mut_data(), 1) }
     a
 }
 
@@ -208,7 +181,7 @@ pub fn vector_scale(a: &Vector<f64>, alpha: f64) -> Vector<f64> {
 
 #[cfg(test)]
 mod tests {
-    use super::{matrix_multiply, elemul, elemul_affine};
+    use super::{elemul, elemul_affine, matrix_multiply};
 
     #[test]
     fn test_matrix_multiply() {

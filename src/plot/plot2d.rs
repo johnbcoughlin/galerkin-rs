@@ -85,4 +85,3 @@ impl Drop for Plotter2D {
         self.gnuplot.kill().expect("error killing gnuplot");
     }
 }
-

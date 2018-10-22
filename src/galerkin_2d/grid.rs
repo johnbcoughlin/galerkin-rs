@@ -20,9 +20,9 @@ pub enum FaceNumber {
 }
 
 pub enum FaceType<'grid, GS: GalerkinScheme>
-where
-    <GS::U as Unknown>::Line: 'grid,
-    <GS::FS as FluxScheme<GS::U>>::F: 'grid,
+    where
+        <GS::U as Unknown>::Line: 'grid,
+        <GS::FS as FluxScheme<GS::U>>::F: 'grid,
 {
     // An interior face with the index of the element on the other side.
     Interior(i32, FaceNumber),
@@ -31,7 +31,7 @@ where
     // the time parameter.
     Boundary(
         // the exterior value of the unknown, as a function of time
-        &'grid Fn(f64) -> <GS::U as Unknown>::Line,
+        &'grid Fn(f64, &Vector<f64>, &Vector<f64>) -> <GS::U as Unknown>::Line,
         // the exterior value of the spatial parameter
         &'grid Fn() -> <<GS::FS as FluxScheme<GS::U>>::F as SpatialVariable>::Line,
     ),
@@ -48,9 +48,9 @@ impl<'grid, GS: GalerkinScheme> Debug for FaceType<'grid, GS> {
 
 #[derive(Debug)]
 pub struct Face<'grid, GS: GalerkinScheme>
-where
-    <GS::U as Unknown>::Line: 'grid,
-    <GS::FS as FluxScheme<GS::U>>::F: 'grid,
+    where
+        <GS::U as Unknown>::Line: 'grid,
+        <GS::FS as FluxScheme<GS::U>>::F: 'grid,
 {
     pub face_type: FaceType<'grid, GS>,
     pub flux_key: <GS::FS as FluxScheme<GS::U>>::K,
@@ -83,9 +83,9 @@ pub struct LocalMetric {
 
 #[derive(Debug)]
 pub struct Element<'grid, GS: GalerkinScheme>
-where
-    <GS::U as Unknown>::Line: 'grid,
-    <GS::FS as FluxScheme<GS::U>>::F: 'grid,
+    where
+        <GS::U as Unknown>::Line: 'grid,
+        <GS::FS as FluxScheme<GS::U>>::F: 'grid,
 {
     pub index: i32,
     pub x_k: Vector<f64>,
@@ -100,9 +100,35 @@ where
     pub face3: Face<'grid, GS>,
 }
 
+impl<'grid, GS: GalerkinScheme> Element<'grid, GS> {
+    pub fn face<'a>(&'a self, number: FaceNumber) -> &'a Face<'grid, GS> {
+        match number {
+            FaceNumber::One => &self.face1,
+            FaceNumber::Two => &self.face2,
+            FaceNumber::Three => &self.face3,
+        }
+    }
+
+    pub fn face_x(&self, number: FaceNumber, reference_element: &ReferenceElement) -> Vector<f64> {
+        match number {
+            FaceNumber::One => self.x_k.select(reference_element.face1.as_slice()),
+            FaceNumber::Two => self.x_k.select(reference_element.face2.as_slice()),
+            FaceNumber::Three => self.x_k.select(reference_element.face3.as_slice()),
+        }
+    }
+
+    pub fn face_y(&self, number: FaceNumber, reference_element: &ReferenceElement) -> Vector<f64> {
+        match number {
+            FaceNumber::One => self.y_k.select(reference_element.face1.as_slice()),
+            FaceNumber::Two => self.y_k.select(reference_element.face2.as_slice()),
+            FaceNumber::Three => self.y_k.select(reference_element.face3.as_slice()),
+        }
+    }
+}
+
 pub struct ElementStorage<GS>
-where
-    GS: GalerkinScheme,
+    where
+        GS: GalerkinScheme,
 {
     pub u_k: GS::U,
 
@@ -124,9 +150,9 @@ where
 
 #[derive(Debug)]
 pub struct Grid<'grid, GS: GalerkinScheme>
-where
-    <GS::U as Unknown>::Line: 'grid,
-    <GS::FS as FluxScheme<GS::U>>::F: 'grid,
+    where
+        <GS::U as Unknown>::Line: 'grid,
+        <GS::FS as FluxScheme<GS::U>>::F: 'grid,
 {
     pub elements: Vec<Element<'grid, GS>>,
 }
@@ -162,11 +188,11 @@ pub fn assemble_grid<'grid, GS, F, FExterior, FSP>(
     interior_flux_key: <GS::FS as FluxScheme<GS::U>>::K,
     exterior_flux_key: <GS::FS as FluxScheme<GS::U>>::K,
 ) -> Grid<'grid, GS>
-where
-    GS: GalerkinScheme,
-    F: Fn(f64) -> <GS::U as Unknown>::Line + 'grid,
-    FExterior: Fn() -> <<GS::FS as FluxScheme<GS::U>>::F as SpatialVariable>::Line,
-    FSP: Fn(&Vector<f64>, &Vector<f64>) -> <GS::FS as FluxScheme<GS::U>>::F,
+    where
+        GS: GalerkinScheme,
+        for<'r, 's> F: Fn(f64, &'r Vector<f64>, &'s Vector<f64>) -> <GS::U as Unknown>::Line + 'grid,
+        FExterior: Fn() -> <<GS::FS as FluxScheme<GS::U>>::F as SpatialVariable>::Line,
+        FSP: Fn(&Vector<f64>, &Vector<f64>) -> <GS::FS as FluxScheme<GS::U>>::F,
 {
     let points = &mesh.points;
     let rs = &reference_element.rs;
@@ -268,8 +294,8 @@ fn build_face<'grid, GS>(
     reference_element: &ReferenceElement,
     local_metric: &LocalMetric,
 ) -> Face<'grid, GS>
-where
-    GS: GalerkinScheme,
+    where
+        GS: GalerkinScheme,
 {
     let slice = reference_element.face(face_number).as_slice();
     let x_r_face = local_metric.x_r.select(slice);
@@ -383,6 +409,34 @@ pub trait SpatialVariable: Debug {
     fn face3_zero(reference_element: &ReferenceElement) -> Self::Line;
 }
 
+impl SpatialVariable for () {
+    type Line = ();
+
+    fn edge_1(&self, _reference_element: &ReferenceElement) -> () {
+        ()
+    }
+
+    fn edge_2(&self, _reference_element: &ReferenceElement) -> () {
+        ()
+    }
+
+    fn edge_3(&self, _reference_element: &ReferenceElement) -> () {
+        ()
+    }
+
+    fn face1_zero(_reference_element: &ReferenceElement) -> () {
+        ()
+    }
+
+    fn face2_zero(_reference_element: &ReferenceElement) -> () {
+        ()
+    }
+
+    fn face3_zero(_reference_element: &ReferenceElement) -> () {
+        ()
+    }
+}
+
 #[cfg(test)]
 mod assemble_edges_to_triangle_test {
     use super::{assemble_edges_to_triangle, Edge, EdgeType, FaceNumber::*};
@@ -402,12 +456,9 @@ mod assemble_edges_to_triangle_test {
         let triangles = vec![Triangle { a: 0, b: 1, c: 2 }];
         let mut result = assemble_edges_to_triangle(&triangles);
         assert_that!(result).has_size(3);
-        assert_that!(result.remove(&Edge { n1: 0, n2: 1 }))
-            .contains(EdgeType::Exterior(0, One));
-        assert_that!(result.remove(&Edge { n1: 1, n2: 2 }))
-            .contains(EdgeType::Exterior(0, Two));
-        assert_that!(result.remove(&Edge { n1: 0, n2: 2 }))
-            .contains(EdgeType::Exterior(0, Three));
+        assert_that!(result.remove(&Edge { n1: 0, n2: 1 })).contains(EdgeType::Exterior(0, One));
+        assert_that!(result.remove(&Edge { n1: 1, n2: 2 })).contains(EdgeType::Exterior(0, Two));
+        assert_that!(result.remove(&Edge { n1: 0, n2: 2 })).contains(EdgeType::Exterior(0, Three));
     }
 
     #[test]
@@ -421,6 +472,6 @@ mod assemble_edges_to_triangle_test {
     }
 
     fn remove_edge(result: &mut HashMap<Edge, EdgeType>, n1: i32, n2: i32) -> Option<EdgeType> {
-        result.remove(&Edge {n1, n2})
+        result.remove(&Edge { n1, n2 })
     }
 }
