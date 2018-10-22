@@ -30,10 +30,12 @@ fn main() {
 }
 
 pub fn euler_2d_example() {
-    let n_p = 5;
+    let n_p = 9;
     let reference_element = ReferenceElement::legendre(n_p);
     let operators = assemble_operators(&reference_element);
     let mesh = distmesh_2d::isentropic_vortex();
+
+    println!("here!!");
 
     let grid: Grid<Euler2D> = assemble_grid(
         &reference_element,
@@ -67,7 +69,7 @@ fn euler_2d<'grid, Fx>(
     Fx: Fn(f64, &Vector<f64>, &Vector<f64>) -> Q,
 {
     let mut plotter = if plot {
-        Some(GnuplotPlotter3D::create(-1., 1., -1., 1., -1., 1.))
+        Some(GnuplotPlotter3D::create(0., 10., -5., 5., 0., 4.))
     } else {
         None
     };
@@ -83,13 +85,14 @@ fn euler_2d<'grid, Fx>(
 
     let mut t: f64 = 0.0;
 
-    let dt = timestep(
+    let mut dt = timestep(
         grid,
         &storage,
         reference_element
     );
 
-    while t < final_time {
+    let mut epoch = 0;
+    while epoch < 100 {
         for int_rk in 0..5 {
             communicate(t, reference_element, grid, &mut storage);
 
@@ -113,6 +116,11 @@ fn euler_2d<'grid, Fx>(
         }
         println!("time: {}", t);
         t = t + dt;
+        dt = timestep(
+            grid,
+            &storage,
+            reference_element
+        );
         if true {
             match plotter {
                 None => {}
@@ -120,7 +128,8 @@ fn euler_2d<'grid, Fx>(
                     plotter.header();
                     for elt in (*grid).elements.iter() {
                         let storage = &storage[elt.index as usize];
-                        plotter.plot(&elt.x_k, &elt.y_k, &storage.u_k.rho_u);
+                        plotter.plot(&elt.x_k, &elt.y_k, &storage.u_k.E);
+//                        println!("{}", &storage.u_k.E);
                     }
                     plotter.replot();
                 }
@@ -198,7 +207,7 @@ fn isentropic_vortex(t: f64, x: &Vector<f64>, y: &Vector<f64>) -> Q {
     let beta_exp = r.apply(&|r: f64| f64::exp(1. - r * r)) * beta;
 
     let u = -(y - y_0).elemul(&beta_exp) / (2. * consts::PI) + 1.;
-    let v = (x - x_0).elemul(&beta_exp) / (2. * consts::PI);
+    let v = (x - t - x_0).elemul(&beta_exp) / (2. * consts::PI);
     let rho = (-beta_exp.elemul(&beta_exp) * (gamma - 1.) /
         (16. * gamma * consts::PI * consts::PI) + 1.)
         .apply(&|x| x.powf(1. / (gamma - 1.)));
@@ -228,12 +237,21 @@ mod tests {
     use rulinalg::vector::Vector;
 
     #[test]
-    fn test_isentropic_vortex() {
+    fn test_isentropic_vortex_t0() {
         let q = isentropic_vortex(0., &vector![5.1], &vector![0.2]);
         println!("{:?}", q);
         assert_eq!(q.rho[0], 0.40642807906722056);
         assert_eq!(q.rho_u[0], 0.2391713520277582);
         assert_eq!(q.rho_v[0], 0.0836283635197309);
         assert_eq!(q.E[0], 0.7877659976239465);
+    }
+    #[test]
+    fn test_isentropic_vortex_t1() {
+        let q = isentropic_vortex(1., &vector![5.1], &vector![0.2]);
+        println!("{:?}", q);
+        assert_eq!(q.rho[0], 0.8542740991590158);
+        assert_eq!(q.rho_u[0], 0.6963088550105302);
+        assert_eq!(q.rho_v[0], -0.7108435986681854);
+        assert_eq!(q.E[0], 2.5848091516382796);
     }
 }

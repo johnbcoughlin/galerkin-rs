@@ -123,7 +123,14 @@ pub fn communicate<GS>(
             }
             FaceType::Boundary(bc, _) => {
                 // minus is interior, plus is neighbor
-                (face1, bc(t, &elt.x_k, &elt.y_k))
+                (
+                    face1,
+                    bc(
+                        t,
+                        &elt.face_x(FaceNumber::One, reference_element),
+                        &elt.face_y(FaceNumber::One, reference_element),
+                    ),
+                )
             }
         };
         storage.u_face1_minus.replace(face1_minus);
@@ -138,7 +145,14 @@ pub fn communicate<GS>(
             }
             FaceType::Boundary(bc, _) => {
                 // minus is interior, plus is neighbor
-                (face2, bc(t, &elt.x_k, &elt.y_k))
+                (
+                    face2,
+                    bc(
+                       t,
+                       &elt.face_x(FaceNumber::Two, reference_element),
+                       &elt.face_y(FaceNumber::Two, reference_element),
+                    ),
+                )
             }
         };
         storage.u_face2_minus.replace(face2_minus);
@@ -153,7 +167,14 @@ pub fn communicate<GS>(
             }
             FaceType::Boundary(bc, _) => {
                 // minus is interior, plus is neighbor
-                (face3, bc(t, &elt.x_k, &elt.y_k))
+                (
+                    face3,
+                    bc(
+                        t,
+                        &elt.face_x(FaceNumber::Three, reference_element),
+                        &elt.face_y(FaceNumber::Three, reference_element),
+                    ),
+                )
             }
         };
         storage.u_face3_minus.replace(face3_minus);

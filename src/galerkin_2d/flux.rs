@@ -8,6 +8,7 @@ use rulinalg::vector::Vector;
 use std::fmt::Debug;
 use std::ops::Deref;
 
+#[derive(Debug)]
 pub struct Side<'iter, U, F>
 where
     U: Unknown,

@@ -39,7 +39,9 @@ impl GnuplotPlotter3D {
         writeln!(stdin, "set xrange [{}:{}]", x_min, x_max);
         writeln!(stdin, "set yrange [{}:{}]", y_min, y_max);
         writeln!(stdin, "set zrange [{}:{}]", z_min, z_max);
-        writeln!(stdin, "set dgrid3d 30,30");
+        writeln!(stdin, "set dgrid3d 100,100");
+        writeln!(stdin, "set style data lines");
+        writeln!(stdin, "set pm3d");
         writeln!(stdin, "set hidden3d");
         writeln!(
             stdin,
