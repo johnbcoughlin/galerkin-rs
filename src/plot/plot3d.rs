@@ -112,5 +112,3 @@ impl Plotter3D for GnuplotPlotter3D {
         thread::sleep(Duration::from_millis(100));
     }
 }
-
-struct GliumPlotter3D {}

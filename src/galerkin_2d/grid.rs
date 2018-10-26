@@ -1,4 +1,5 @@
 extern crate rulinalg;
+extern crate itertools;
 
 use distmesh::mesh::{Mesh, Triangle};
 use galerkin_2d::flux::FluxScheme;
@@ -11,6 +12,7 @@ use std::cell::RefCell;
 use std::collections::HashMap;
 use std::fmt;
 use std::fmt::Debug;
+use distmesh::mesh::Point2D;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum FaceNumber {
@@ -31,9 +33,9 @@ pub enum FaceType<'grid, GS: GalerkinScheme>
     // the time parameter.
     Boundary(
         // the exterior value of the unknown, as a function of time
-        &'grid Fn(f64, &Vector<f64>, &Vector<f64>) -> <GS::U as Unknown>::Line,
+        &'grid (Fn(f64, &Vector<f64>, &Vector<f64>) -> <GS::U as Unknown>::Line + Send + Sync),
         // the exterior value of the spatial parameter
-        &'grid Fn() -> <<GS::FS as FluxScheme<GS::U>>::F as SpatialVariable>::Line,
+        &'grid (Fn() -> <<GS::FS as FluxScheme<GS::U>>::F as SpatialVariable>::Line + Send + Sync),
     ),
 }
 
@@ -157,6 +159,36 @@ pub struct Grid<'grid, GS: GalerkinScheme>
     pub elements: Vec<Element<'grid, GS>>,
 }
 
+impl<'grid, GS: GalerkinScheme> Grid<'grid, GS>
+    where
+        <GS::U as Unknown>::Line: 'grid,
+        <GS::FS as FluxScheme<GS::U>>::F: 'grid,
+{
+    pub fn to_mesh(&self, reference_element: &ReferenceElement) -> Mesh {
+        let np = reference_element.ss.size();
+        let reference_triangulation = reference_element.to_mesh().triangles;
+        println!("{:?}", reference_triangulation);
+        let points: Vec<Point2D> = self.elements.iter()
+            .flat_map(|ref elt| elt.x_k.iter().zip(elt.y_k.iter()))
+            .map(|(&x, &y)| Point2D { x, y })
+            .collect();
+
+        let triangles: Vec<Triangle> = self.elements.iter().enumerate()
+            .flat_map(|(i, ref elt)| {
+                let k = (np * i) as i32;
+                reference_triangulation.iter()
+                    .map(move |tri| Triangle {
+                        a: tri.a + k,
+                        b: tri.b + k,
+                        c: tri.c + k
+                    })
+            })
+            .collect();
+
+        Mesh { points, triangles }
+    }
+}
+
 fn assemble_edges_to_triangle(triangles: &Vec<Triangle>) -> HashMap<Edge, EdgeType> {
     let mut edges_to_triangle: HashMap<Edge, EdgeType> = HashMap::new();
     for (i, ref triangle) in triangles.iter().enumerate() {
@@ -191,7 +223,9 @@ pub fn assemble_grid<'grid, GS, F, FExterior, FSP>(
     where
         GS: GalerkinScheme,
         for<'r, 's> F: Fn(f64, &'r Vector<f64>, &'s Vector<f64>) -> <GS::U as Unknown>::Line + 'grid,
+        F: Send + Sync,
         FExterior: Fn() -> <<GS::FS as FluxScheme<GS::U>>::F as SpatialVariable>::Line,
+        FExterior: Send + Sync,
         FSP: Fn(&Vector<f64>, &Vector<f64>) -> <GS::FS as FluxScheme<GS::U>>::F,
 {
     let points = &mesh.points;

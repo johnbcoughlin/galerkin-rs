@@ -21,6 +21,8 @@ use std::iter::repeat_with;
 use galerkin::galerkin_2d::unknowns::communicate;
 use galerkin::functions::range_kutta::*;
 use galerkin::plot::plot3d::{Plotter3D, GnuplotPlotter3D};
+use galerkin::plot::glium::run_inside_plot;
+use std::sync::mpsc::Sender;
 
 mod flux;
 mod unknowns;
@@ -30,12 +32,10 @@ fn main() {
 }
 
 pub fn euler_2d_example() {
-    let n_p = 9;
+    let n_p = 3;
     let reference_element = ReferenceElement::legendre(n_p);
     let operators = assemble_operators(&reference_element);
     let mesh = distmesh_2d::isentropic_vortex();
-
-    println!("here!!");
 
     let grid: Grid<Euler2D> = assemble_grid(
         &reference_element,
@@ -48,14 +48,18 @@ pub fn euler_2d_example() {
         EulerFluxType::LF,
     );
 
-    euler_2d(
-        &grid,
-        &reference_element,
-        &operators,
-        &isentropic_vortex,
-        1.,
-        true,
-    );
+    let expanded_mesh = grid.to_mesh(&reference_element);
+    run_inside_plot(expanded_mesh, move |sender| {
+        euler_2d(
+            &grid,
+            &reference_element,
+            &operators,
+            &isentropic_vortex,
+            1.,
+            false,
+            sender,
+        );
+    });
 }
 
 fn euler_2d<'grid, Fx>(
@@ -65,6 +69,7 @@ fn euler_2d<'grid, Fx>(
     exact_solution: Fx,
     final_time: f64,
     plot: bool,
+    sender: Sender<Vec<f64>>,
 ) where
     Fx: Fn(f64, &Vector<f64>, &Vector<f64>) -> Q,
 {
@@ -122,18 +127,29 @@ fn euler_2d<'grid, Fx>(
             reference_element
         );
         if true {
-            match plotter {
-                None => {}
-                Some(ref mut plotter) => {
-                    plotter.header();
-                    for elt in (*grid).elements.iter() {
-                        let storage = &storage[elt.index as usize];
-                        plotter.plot(&elt.x_k, &elt.y_k, &storage.u_k.E);
+            let E = (*grid).elements.iter()
+                .flat_map(|ref elt| storage[elt.index as usize].u_k.E.iter())
+                .map(|&e| e)
+                .collect();
+//            sender.send(E);
+//            let E = (*grid).elements.iter()
+//                .flat_map(|ref elt| elt.x_k.iter().zip(elt.y_k.iter())
+//                    .map(|(x, y)| x + y))
+//                .collect();
+            sender.send(E);
+//            match plotter {
+//                None => {}
+//                Some(ref mut plotter) => {
+//                    plotter.header();
+//
+//                    for elt in (*grid).elements.iter() {
+//                        let storage = &storage[elt.index as usize];
+//                        plotter.plot(&elt.x_k, &elt.y_k, &storage.u_k.E);
 //                        println!("{}", &storage.u_k.E);
-                    }
-                    plotter.replot();
-                }
-            }
+//                    }
+//                    plotter.replot();
+//                }
+//            }
         }
     }
 }

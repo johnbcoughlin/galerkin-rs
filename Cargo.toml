@@ -9,6 +9,8 @@ clippy = {version = "*", optional = true}
 num = "0.1"
 rulinalg = "0.4.2"
 
+rand = "0.5.5"
+
 # See https://github.com/blas-lapack-rs/blas-lapack-rs.github.io/wiki
 
 ## Wrappers
@@ -24,11 +26,12 @@ blas-src = "0.2.1"
 lapack-src = "0.2.1"
 
 gnuplot = "0.0.26"
+rtriangulate = "0.3"
 
 tempfile = "3.0.3"
 itertools = "0.7.8"
 
-#glium = "0.22.0"
+glium = "0.22.0"
 
 [target.'cfg(target_os = "macos")'.dependencies]
 accelerate-src = "0.3.1"
@@ -42,6 +45,10 @@ debug = true
 [lib]
 name = "galerkin"
 path = "src/lib.rs"
+
+[[bin]]
+name = "glium-test"
+path = "src/plot/glium_test.rs"
 
 [[bin]]
 name = "advec-1d"

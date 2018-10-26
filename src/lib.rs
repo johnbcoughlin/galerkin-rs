@@ -3,6 +3,8 @@
 #[macro_use]
 extern crate rulinalg;
 extern crate gnuplot;
+#[macro_use]
+extern crate glium;
 
 #[macro_use]
 pub mod testing;
