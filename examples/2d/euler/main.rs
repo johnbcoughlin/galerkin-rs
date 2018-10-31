@@ -8,7 +8,7 @@ use flux::*;
 use galerkin::galerkin_2d::flux::compute_flux;
 use galerkin::galerkin_2d::galerkin::GalerkinScheme;
 use galerkin::galerkin_2d::grid::{assemble_grid, Element, ElementStorage, Grid};
-use galerkin::galerkin_2d::operators::{assemble_operators, FaceLiftable, Operators};
+use galerkin::galerkin_2d::operators::{assemble_operators, cutoff_filter, FaceLiftable, Operators};
 use galerkin::galerkin_2d::reference_element::ReferenceElement;
 use galerkin::distmesh::distmesh_2d;
 use galerkin::galerkin_2d::unknowns::Unknown;
@@ -32,7 +32,7 @@ fn main() {
 }
 
 pub fn euler_2d_example() {
-    let n_p = 3;
+    let n_p = 9;
     let reference_element = ReferenceElement::legendre(n_p);
     let operators = assemble_operators(&reference_element);
     let mesh = distmesh_2d::isentropic_vortex();
@@ -73,12 +73,6 @@ fn euler_2d<'grid, Fx>(
 ) where
     Fx: Fn(f64, &Vector<f64>, &Vector<f64>) -> Q,
 {
-    let mut plotter = if plot {
-        Some(GnuplotPlotter3D::create(0., 10., -5., 5., 0., 4.))
-    } else {
-        None
-    };
-
     let mut storage: Vec<ElementStorage<Euler2D>> = initialize_storage(
         |x, y| exact_solution(0., x, y),
         reference_element,
@@ -88,12 +82,18 @@ fn euler_2d<'grid, Fx>(
         .take(grid.elements.len())
         .collect();
 
+    let filter = cutoff_filter(operators, reference_element.n, 0.95);
+
+    for s in storage.iter_mut() {
+        s.u_k = s.u_k.matrix_multiply(&filter);
+    }
+
     let mut t: f64 = 0.0;
 
     let mut dt = timestep(
         grid,
         &storage,
-        reference_element
+        reference_element,
     );
 
     let mut epoch = 0;
@@ -108,7 +108,7 @@ fn euler_2d<'grid, Fx>(
                     let residuals_q = &(residuals[elt.index as usize]);
                     let rhs = euler_rhs_2d(&elt, &storage, &operators);
                     residuals_q * RKA[int_rk] + rhs * dt
-                };
+                }.matrix_multiply(&filter);
 
                 let q = {
                     let q: &Q = &storage.u_k;
@@ -124,32 +124,15 @@ fn euler_2d<'grid, Fx>(
         dt = timestep(
             grid,
             &storage,
-            reference_element
+            reference_element,
         );
-        if true {
-            let E = (*grid).elements.iter()
-                .flat_map(|ref elt| storage[elt.index as usize].u_k.E.iter())
+        // plot
+        {
+            let rho_u = (*grid).elements.iter()
+                .flat_map(|ref elt| storage[elt.index as usize].u_k.rho_u.iter())
                 .map(|&e| e)
                 .collect();
-//            sender.send(E);
-//            let E = (*grid).elements.iter()
-//                .flat_map(|ref elt| elt.x_k.iter().zip(elt.y_k.iter())
-//                    .map(|(x, y)| x + y))
-//                .collect();
-            sender.send(E);
-//            match plotter {
-//                None => {}
-//                Some(ref mut plotter) => {
-//                    plotter.header();
-//
-//                    for elt in (*grid).elements.iter() {
-//                        let storage = &storage[elt.index as usize];
-//                        plotter.plot(&elt.x_k, &elt.y_k, &storage.u_k.E);
-//                        println!("{}", &storage.u_k.E);
-//                    }
-//                    plotter.replot();
-//                }
-//            }
+            sender.send(rho_u);
         }
     }
 }
@@ -261,6 +244,7 @@ mod tests {
         assert_eq!(q.rho_v[0], 0.0836283635197309);
         assert_eq!(q.E[0], 0.7877659976239465);
     }
+
     #[test]
     fn test_isentropic_vortex_t1() {
         let q = isentropic_vortex(1., &vector![5.1], &vector![0.2]);
