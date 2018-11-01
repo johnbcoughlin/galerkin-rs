@@ -97,11 +97,12 @@ fn euler_2d<'grid, Fx>(
     );
 
     let mut epoch = 0;
-    while epoch < 100 {
+    while epoch < 1 {
         for int_rk in 0..5 {
             communicate(t, reference_element, grid, &mut storage);
 
             for elt in (*grid).elements.iter() {
+                println!("{}", elt.local_metric.jacobian);
                 let mut storage = &mut storage[elt.index as usize];
 
                 let residuals_q = {
@@ -134,6 +135,7 @@ fn euler_2d<'grid, Fx>(
                 .collect();
             sender.send(rho_u);
         }
+        epoch += 1;
     }
 }
 
@@ -152,6 +154,7 @@ fn euler_rhs_2d<'grid>(
             + (dg_dr * &elt.local_metric.r_y + dg_ds * &elt.local_metric.s_y)
     };
 
+    // returns nflux / 2
     let (face1_flux, face2_flux, face3_flux) = compute_flux(elt, elt_storage);
     let surface_term = Q::lift_faces(
         &operators.lift,
