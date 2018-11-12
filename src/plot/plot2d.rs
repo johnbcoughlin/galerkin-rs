@@ -40,13 +40,13 @@ impl Plotter2D {
 
     fn begin_plotting(&mut self, x_min: f64, x_max: f64, y_min: f64, y_max: f64) {
         let mut stdin = (&mut self.gnuplot.stdin).as_mut().expect("No stdin");
-        writeln!(stdin, "set xrange [{}:{}]", x_min, x_max);
-        writeln!(stdin, "set yrange [{}:{}]", y_min, y_max);
+        writeln!(stdin, "set xrange [{}:{}]", x_min, x_max).unwrap();
+        writeln!(stdin, "set yrange [{}:{}]", y_min, y_max).unwrap();
         writeln!(
             stdin,
             "plot \"{}\" using 1:2 with lines",
             self.path.to_str().unwrap()
-        );
+        ).unwrap();
     }
 
     pub fn header(&mut self) {
