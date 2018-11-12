@@ -97,12 +97,11 @@ fn euler_2d<'grid, Fx>(
     );
 
     let mut epoch = 0;
-    while epoch < 1 {
+    while epoch < 100 {
         for int_rk in 0..5 {
             communicate(t, reference_element, grid, &mut storage);
 
             for elt in (*grid).elements.iter() {
-                println!("{}", elt.local_metric.jacobian);
                 let mut storage = &mut storage[elt.index as usize];
 
                 let residuals_q = {

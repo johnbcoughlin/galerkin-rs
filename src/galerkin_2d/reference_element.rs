@@ -1,8 +1,11 @@
 extern crate rulinalg;
 extern crate rtriangulate;
+extern crate itertools;
 
 use self::rulinalg::matrix::{BaseMatrix, Matrix};
 use self::rulinalg::vector::Vector;
+use self::itertools::Itertools;
+use std::cmp::Ordering::*;
 use functions::jacobi_polynomials;
 use functions::vandermonde;
 use galerkin_2d::grid::FaceNumber;
@@ -57,15 +60,24 @@ impl ReferenceElement {
 
         let rs: Vector<f64> = -&L2 + &L3 - &L1;
         let ss: Vector<f64> = -&L2 - &L3 + &L1;
+        // we order the points counter-clockwise for consistency
         let face1: Vec<usize> = (0..rs.size())
+            .into_iter()
+            // right along the base
+            .sorted_by(|i, j| if rs[*i] > rs[*j] { Greater } else { Less })
             .into_iter()
             .filter(|i| (ss[*i] + 1.).abs() < EPSILON)
             .collect();
         let face2: Vec<usize> = (0..rs.size())
             .into_iter()
+            // up the diagonal
+            .sorted_by(|i, j| if ss[*i] > ss[*j] { Greater } else { Less })
+            .into_iter()
             .filter(|i| (rs[*i] + ss[*i]).abs() < EPSILON)
             .collect();
         let face3: Vec<usize> = (0..rs.size())
+            .into_iter()
+            .sorted_by(|i, j| if ss[*i] < ss[*j] { Greater } else { Less })
             .into_iter()
             .filter(|i| (rs[*i] + 1.).abs() < EPSILON)
             .collect();
