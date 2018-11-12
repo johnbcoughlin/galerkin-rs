@@ -63,7 +63,7 @@ where
     Fx: Fn(&Vector<f64>, &Vector<f64>) -> GS::U,
 {
     let mut result: Vec<ElementStorage<GS>> = vec![];
-    for (i, elt) in grid.elements.iter().enumerate() {
+    for (_i, elt) in grid.elements.iter().enumerate() {
         let (f_face1_minus, f_face1_plus) = match elt.face1.face_type {
             FaceType::Interior(j, face_number) => (
                 elt.spatial_parameters.edge_1(reference_element),

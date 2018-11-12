@@ -475,7 +475,6 @@ impl SpatialVariable for () {
 mod assemble_edges_to_triangle_test {
     use super::{assemble_edges_to_triangle, Edge, EdgeType, FaceNumber::*};
     use distmesh::mesh::Triangle;
-    #[macro_use]
     use testing::assertions::{self, Assertion};
     use std::collections::HashMap;
 

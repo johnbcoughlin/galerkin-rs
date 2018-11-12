@@ -50,6 +50,7 @@ impl ReferenceElement {
         }
     }
 
+    #[allow(non_snake_case)]
     pub fn legendre(n: i32) -> ReferenceElement {
         let n_p = (n + 1) * (n + 2) / 2;
         let (x, y) = ReferenceElement::equilateral_nodes(n);
@@ -99,6 +100,7 @@ impl ReferenceElement {
         }
     }
 
+    #[allow(non_snake_case)]
     fn equilateral_nodes(n: i32) -> (Vector<f64>, Vector<f64>) {
         let nf = n as f64;
         let alpha = if n < 16 { ALPHAS[n as usize - 1] } else { 1.6 };
@@ -204,8 +206,6 @@ fn warp_factor(n_p: i32, gammas: Vector<f64>) -> Vector<f64> {
     );
 
     let v = vandermonde::vandermonde(&dist_eq, n_p);
-
-    let n_r = gammas.size();
 
     let data: Vec<Vector<f64>> = (0..n_p + 1)
         .into_iter()
