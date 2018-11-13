@@ -8,7 +8,7 @@ extern crate openblas_src;
 extern crate rulinalg;
 
 use blas::blas::{daxpy, dgbmv, dgemv, dscal};
-use rulinalg::matrix::{BaseMatrix, BaseMatrixMut, Matrix};
+use rulinalg::matrix::{BaseMatrix, Matrix};
 use rulinalg::vector::Vector;
 
 pub fn matrix_multiply(a: &Matrix<f64>, x: &Vector<f64>) -> Vector<f64> {
