@@ -1,11 +1,11 @@
-#[cfg(target_os = "macos")]
-extern crate accelerate_src;
 extern crate lapack;
 extern crate lapack_src;
-extern crate num;
+#[cfg(target_os = "macos")]
+extern crate accelerate_src;
 #[cfg(target_os = "linux")]
 extern crate openblas_src;
 extern crate rulinalg;
+extern crate num;
 
 use self::lapack::*;
 use self::num::traits::real::Real;
