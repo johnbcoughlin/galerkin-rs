@@ -36,18 +36,16 @@ impl GnuplotPlotter3D {
         z_max: f64,
     ) {
         let mut stdin = (&mut self.gnuplot.stdin).as_mut().expect("No stdin");
-        writeln!(stdin, "set xrange [{}:{}]", x_min, x_max);
-        writeln!(stdin, "set yrange [{}:{}]", y_min, y_max);
-        writeln!(stdin, "set zrange [{}:{}]", z_min, z_max);
-        writeln!(stdin, "set dgrid3d 100,100");
-        writeln!(stdin, "set style data lines");
-        writeln!(stdin, "set pm3d");
-        writeln!(stdin, "set hidden3d");
+        writeln!(stdin, "set xrange [{}:{}]", x_min, x_max).unwrap();
+        writeln!(stdin, "set yrange [{}:{}]", y_min, y_max).unwrap();
+        writeln!(stdin, "set zrange [{}:{}]", z_min, z_max).unwrap();
+        writeln!(stdin, "set dgrid3d 30,30").unwrap();
+        writeln!(stdin, "set hidden3d").unwrap();
         writeln!(
             stdin,
             "splot \"{}\" u 1:2:3 with lines",
             self.path.to_str().unwrap()
-        );
+        ).unwrap();
     }
 }
 
@@ -65,12 +63,12 @@ impl Plotter3D for GnuplotPlotter3D {
             .into_path();
         let path = dir.join("data");
         println!("Data file: {}", path.to_str().unwrap());
-        let file = OpenOptions::new()
+        let _file = OpenOptions::new()
             .create(true)
             .write(true)
             .open(&path)
             .expect("could not create data file");
-        let mut gnuplot = Command::new("gnuplot")
+        let gnuplot = Command::new("gnuplot")
             .arg("-p")
             .stdin(Stdio::piped())
             .spawn()
@@ -107,7 +105,7 @@ impl Plotter3D for GnuplotPlotter3D {
     }
 
     fn replot(&mut self) {
-        let mut stdin = (&mut self.gnuplot.stdin).as_mut().expect("No stdin");
+        let stdin = (&mut self.gnuplot.stdin).as_mut().expect("No stdin");
         writeln!(stdin, "replot").expect("error");
         thread::sleep(Duration::from_millis(100));
     }

@@ -8,7 +8,7 @@ extern crate openblas_src;
 extern crate rulinalg;
 
 use blas::blas::{daxpy, dgbmv, dgemv, dscal};
-use rulinalg::matrix::{BaseMatrix, BaseMatrixMut, Matrix};
+use rulinalg::matrix::{BaseMatrix, Matrix};
 use rulinalg::vector::Vector;
 
 pub fn matrix_multiply(a: &Matrix<f64>, x: &Vector<f64>) -> Vector<f64> {
@@ -78,8 +78,7 @@ pub fn elemul_affine(
 ) -> Vector<f64> {
     assert_eq!(a.size(), b.size());
     assert_eq!(a.size(), c.size());
-    let n = a.size() as i32;
-    let mut y = c.clone();
+    let y = c.clone();
     elemul_affine_(a, b, alpha, y, beta)
 }
 
@@ -121,7 +120,7 @@ pub fn elemul(a: &Vector<f64>, b: &Vector<f64>) -> Vector<f64> {
  * Computes a + b
  */
 pub fn vector_add(a: &Vector<f64>, b: &Vector<f64>) -> Vector<f64> {
-    let mut y = b.clone();
+    let y = b.clone();
     vector_add_(a, y)
 }
 
@@ -136,7 +135,7 @@ pub fn vector_add_(a: &Vector<f64>, mut b: Vector<f64>) -> Vector<f64> {
  * Computes a - b
  */
 pub fn vector_sub(a: &Vector<f64>, b: &Vector<f64>) -> Vector<f64> {
-    let mut y = a.clone();
+    let y = a.clone();
     vector_sub_(y, b)
 }
 
@@ -151,7 +150,7 @@ pub fn vector_sub_(mut a: Vector<f64>, b: &Vector<f64>) -> Vector<f64> {
  * Computes alpha * a + b
  */
 pub fn vector_affine(a: &Vector<f64>, alpha: f64, b: &Vector<f64>) -> Vector<f64> {
-    let mut b = b.clone();
+    let b = b.clone();
     vector_affine_(a, alpha, b)
 }
 
@@ -175,7 +174,7 @@ pub fn vector_scale_(mut a: Vector<f64>, alpha: f64) -> Vector<f64> {
 }
 
 pub fn vector_scale(a: &Vector<f64>, alpha: f64) -> Vector<f64> {
-    let mut x = a.clone();
+    let x = a.clone();
     vector_scale_(x, alpha)
 }
 

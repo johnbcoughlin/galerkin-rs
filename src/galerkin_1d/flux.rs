@@ -56,7 +56,7 @@ where
     U: Unknown,
     F: SpatialFlux,
 {
-    fn flux(&self, minus: Side<U, F>, plus: Side<U, F>, outward_normal: f64) -> U::Unit {
+    fn flux(&self, _minus: Side<U, F>, _plus: Side<U, F>, _outward_normal: f64) -> U::Unit {
         U::zero()
     }
 }

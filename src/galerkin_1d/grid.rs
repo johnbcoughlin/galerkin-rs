@@ -99,7 +99,7 @@ pub struct Face<GS: GalerkinScheme> {
     pub flux: FluxEnum<GS::U, GS::F, GS::FS>,
 }
 
-pub fn freeFlowBoundary<GS: GalerkinScheme>(
+pub fn free_flow_boundary<GS: GalerkinScheme>(
     f: <<GS as GalerkinScheme>::F as SpatialFlux>::Unit,
 ) -> FaceType<GS> {
     FaceType::Boundary(Box::new(move |_, other_side| other_side), f)
