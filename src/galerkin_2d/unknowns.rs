@@ -23,6 +23,8 @@ where
 
     fn zero(reference_element: &ReferenceElement) -> Self;
 
+    fn slice(&self, slice: &[usize]) -> Self::Line;
+
     fn edge_1(&self, reference_element: &ReferenceElement) -> Self::Line;
 
     fn edge_2(&self, reference_element: &ReferenceElement) -> Self::Line;
@@ -35,6 +37,13 @@ where
             FaceNumber::Two => self.edge_2(reference_element),
             FaceNumber::Three => self.edge_3(reference_element),
         }
+    }
+
+    fn face_flipped(&self, number: FaceNumber, reference_element: &ReferenceElement) -> Self::Line {
+        let mut slice = reference_element.face(number).clone();
+        let mut slice = slice.as_mut_slice();
+        slice.reverse();
+        self.slice(slice)
     }
 
     fn face1_zero(reference_element: &ReferenceElement) -> Self::Line;
@@ -119,7 +128,7 @@ pub fn communicate<GS>(
             FaceType::Interior(j, face_number) => {
                 let u_k_neighbor: &GS::U = &storages[j as usize].u_k;
                 // minus is interior, plus is neighbor
-                (face1, u_k_neighbor.face(face_number, reference_element))
+                (face1, u_k_neighbor.face_flipped(face_number, reference_element))
             }
             FaceType::Boundary(bc, _) => {
                 // minus is interior, plus is neighbor
@@ -141,7 +150,7 @@ pub fn communicate<GS>(
             FaceType::Interior(j, face_number) => {
                 let u_k_neighbor: &GS::U = &storages[j as usize].u_k;
                 // minus is interior, plus is neighbor
-                (face2, u_k_neighbor.face(face_number, reference_element))
+                (face2, u_k_neighbor.face_flipped(face_number, reference_element))
             }
             FaceType::Boundary(bc, _) => {
                 // minus is interior, plus is neighbor
@@ -163,7 +172,7 @@ pub fn communicate<GS>(
             FaceType::Interior(j, face_number) => {
                 let u_k_neighbor: &GS::U = &storages[j as usize].u_k;
                 // minus is interior, plus is neighbor
-                (face3, u_k_neighbor.face(face_number, reference_element))
+                (face3, u_k_neighbor.face_flipped(face_number, reference_element))
             }
             FaceType::Boundary(bc, _) => {
                 // minus is interior, plus is neighbor
@@ -192,6 +201,10 @@ macro_rules! unknown_from_vector_fields {
         // Implement the Unknown trait
         impl Unknown for $U {
             type Line = $U;
+
+            fn slice(&self, slice: &[usize]) -> Self::Line {
+                $U { $($field: self.$field.select(slice), )* }
+            }
 
             fn edge_1(&self, reference_element: &ReferenceElement) -> Self::Line {
                 $U { $($field: self.$field.select(reference_element.face1.as_slice()), )* }
