@@ -97,7 +97,7 @@ fn euler_2d<'grid, Fx>(
     );
 
     let mut epoch = 0;
-    while epoch < 100 {
+    while t < final_time {
         for int_rk in 0..5 {
             communicate(t, reference_element, grid, &mut storage);
 

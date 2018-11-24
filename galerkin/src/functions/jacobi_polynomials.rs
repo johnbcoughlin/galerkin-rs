@@ -209,8 +209,13 @@ mod tests {
     fn test_jacobi_3() {
         test_jacobi_val(0.5, 1, 1, 3, -0.7412);
         test_jacobi_val(2.0, 1, 1, 3, 59.2927);
-
+        test_jacobi_val(2.0, 1, 0, 3, 54.27044545606755);
         test_jacobi_val(1.0, 2, 2, 3, 8.4963);
+    }
+
+    #[test]
+    fn test_jacobi_3_prime() {
+        test_jacobi_val(2.0, 1, 0, 3, 54.27044545606755);
     }
 
     fn test_jacobi_val(x: f64, alpha: i32, beta: i32, n: i32, expected_value: f64) {
@@ -246,6 +251,7 @@ mod tests {
     #[test]
     fn test() {
         let roots = grad_legendre_roots(5);
+        println!("{}", roots);
         for &x in roots.iter() {
             assert!((l_prime_5(x).abs() < 1e-5));
         }
