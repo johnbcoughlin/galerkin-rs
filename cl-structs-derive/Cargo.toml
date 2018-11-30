@@ -1,0 +1,14 @@
+[package]
+name = "cl-structs-derive"
+version = "0.1.0"
+authors = ["Jack Coughlin <johnbcoughlin@gmail.com>"]
+edition = "2018"
+
+[lib]
+proc-macro = true
+
+[dependencies]
+ocl = "0.19.1"
+syn = {version = "0.15.21", features = ["full", "extra-traits"]}
+quote = "0.6"
+

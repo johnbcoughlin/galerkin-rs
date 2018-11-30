@@ -3,4 +3,6 @@ members = [
     "galerkin",
     "ocl-macro",
     "ocl-macro-test",
+    "cl-structs",
+    "cl-structs-derive",
 ]

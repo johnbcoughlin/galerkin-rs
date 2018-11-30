@@ -7,10 +7,16 @@
 extern crate proc_macro;
 extern crate syn;
 extern crate quote;
+extern crate ocl;
 
 use proc_macro::{TokenStream, Span, Diagnostic};
 use syn::spanned::Spanned;
 use quote::*;
+
+#[proc_macro_derive(OclPrm)]
+pub fn ocl_prm_derive(input: TokenStream) -> TokenStream {
+//    input
+}
 
 #[proc_macro_attribute]
 pub fn opencl_function(metadata: TokenStream, input: TokenStream) -> TokenStream {

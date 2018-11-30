@@ -1,0 +1,13 @@
+[package]
+name = "cl-structs"
+version = "0.1.0"
+authors = ["Jack Coughlin <johnbcoughlin@gmail.com>"]
+edition = "2018"
+
+[dependencies]
+ocl = "0.19.1"
+cl-structs-derive = { path = "../cl-structs-derive" }
+
+[dev-dependencies]
+static_assertions = "0.3.1"
+compiletest_rs = { version = "0.3", features = ["tmp", "stable"] }

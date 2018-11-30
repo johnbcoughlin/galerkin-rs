@@ -16,7 +16,6 @@ use galerkin_1d::grid::ReferenceElement;
 use opencl::galerkin_1d::grid::BoundaryCondition;
 
 pub trait GalerkinScheme {
-    type Prim: OclPrm;
     type U: Unknown;
     type F: SpatialFlux;
 }
@@ -35,7 +34,7 @@ pub fn entry_point<GS>(
 //    let grid = generate_grid()
 }
 
-fn initialize_storage<GS, Fx>(
+pub fn initialize_storage<GS, Fx>(
     u_0: Fx,
     n_p: i32,
     grid: &Grid<GS>,
@@ -72,7 +71,7 @@ fn initialize_storage<GS, Fx>(
     result
 }
 
-fn communicate<GS>(
+pub fn communicate<GS>(
     t: f64,
     reference_element: &ReferenceElement,
     elt: &Element<GS>,
@@ -125,16 +124,25 @@ __kernel void communicate_external__{boundary_value_kernel}(
     __global {U}* destination,
     __global int index_in_destination,
     __local float t,
-    __local float x
+    __global {U}* existing_values,
+    __global int existing_value_index
 ) {{
-    {U} boundary_value = {boundary_value_kernel}(t, x);
+    {U} existing_value = existing_values[existing_value_index];
+    {U} boundary_value = {boundary_value_kernel}(t, existing_value);
     destination[index_in_destination] = boundary_value;
 }}
 "#;
 
-const RESIDUALS_KERNEL_FORMAT: &'static str = r#"
-__kernel void
-"#;
+pub fn prepare_communication_kernels(u_ident: &str, bc_idents: &Vec<String>) -> String {
+    let interior = format!(INTERIOR_COMMUNICATION_KERNEL_FORMAT, U = u_ident);
+    let mut result = interior;
+    for ref bc_ident in bc_idents {
+        let exterior = format!(EXTERIOR_COMMUNICATION_KERNEL_FORMAT,
+                               U = u_ident, boundary_value_kernel = bc_ident);
+        result = concat!(result, "\n", exterior);
+    }
+    result
+}
 
 pub fn simulate<GS>(grid: &Grid<GS>)
     where
