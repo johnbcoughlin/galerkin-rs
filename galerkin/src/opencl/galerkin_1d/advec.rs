@@ -8,6 +8,7 @@ use opencl::galerkin_1d::galerkin::initialize_storage;
 use galerkin_1d::grid::ReferenceElement;
 use galerkin_1d::operators::Operators;
 use ocl::ProQue;
+use ocl::Program;
 use opencl::galerkin_1d::unknowns::{U, unknown};
 use opencl::galerkin_1d::galerkin::prepare_communication_kernels;
 use opencl::galerkin_1d::unknowns::initialize_residuals;
@@ -48,15 +49,18 @@ pub fn advec_1d(
 
     let mut t: f64 = 0.0;
 
-    let boundary_condition_kernels =
+    let mut program_builder = Program::builder()
+        .src(FREEFLOW_BC_KERNEL)
+        .src(SIN_BC_KERNEL)
+    ;
+    let boundary_condition_kernels = concat!(FREEFLOW_BC_KERNEL, "\n", SIN_BC_KERNEL);
     let communication_kernels = prepare_communication_kernels(
         U::cl_struct_type(), &vec![
             String::from("freeflow_bc"),
-            String::from("sin_bc")
+            String::from("sin_bc"),
         ]
     );
-    let all_src = format!("{}\n{}\n{}\n{}",
-    ADVEC_FLUX_KERNEL, ADVEC_RHS_KERNEL, FREEFLOW_BC_KERNEL, SIN_BC_KERNEL);
+    let all_src = concat!(boundary_condition_kernels, "\n", communication_kernels);
     let pro_que: ProQue = prepare_program_queue();
 
     let mut storage: Vec<ElementStorage<GS>> =

@@ -1,4 +1,5 @@
 extern crate ocl;
+extern crate string_builder;
 
 use opencl::galerkin_1d::grid::SpatialFlux;
 use opencl::galerkin_1d::grid::Grid;
@@ -134,14 +135,17 @@ __kernel void communicate_external__{boundary_value_kernel}(
 "#;
 
 pub fn prepare_communication_kernels(u_ident: &str, bc_idents: &Vec<String>) -> String {
+    let mut builder = string_builder::Builder::new(1_000);
     let interior = format!(INTERIOR_COMMUNICATION_KERNEL_FORMAT, U = u_ident);
-    let mut result = interior;
+    builder.append(interior);
+    builder.append("\n");
     for ref bc_ident in bc_idents {
         let exterior = format!(EXTERIOR_COMMUNICATION_KERNEL_FORMAT,
                                U = u_ident, boundary_value_kernel = bc_ident);
-        result = concat!(result, "\n", exterior);
+        builder.append(exterior);
+        builder.append("\n");
     }
-    result
+    builder.string().unwrap()
 }
 
 pub fn simulate<GS>(grid: &Grid<GS>)

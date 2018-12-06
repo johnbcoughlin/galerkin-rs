@@ -4,6 +4,9 @@ version = "0.1.0"
 authors = ["Jack Coughlin <johnbcoughlin@gmail.com>"]
 edition = "2018"
 
+[build]
+rustflags = '--cfg procmacro2_semver_exempt'
+
 [dependencies]
 ocl = "0.19.1"
 cl-structs-derive = { path = "../cl-structs-derive" }

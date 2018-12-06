@@ -35,6 +35,8 @@ itertools = "0.7.8"
 
 glium = "0.22.0"
 
+string-builder = "0.2.0"
+
 [target.'cfg(target_os = "macos")'.dependencies]
 accelerate-src = "0.3.1"
 
