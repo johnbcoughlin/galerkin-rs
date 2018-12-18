@@ -8,7 +8,6 @@ use ocl::{OclPrm, Kernel};
 use ocl::builders::KernelBuilder;
 use std::clone::Clone;
 use galerkin_1d::grid::ReferenceElement;
-use galerkin_1d::grid::SpatialFlux;
 use galerkin_1d::operators::Operators;
 use ocl::Buffer;
 use std::marker::PhantomData;
@@ -40,16 +39,17 @@ pub struct Element<GS: GalerkinScheme> {
     pub r_x_left: f64,
     pub r_x_right: f64,
 
-    pub f_left_minus: f64,
-    pub f_left_plus: f64,
-    pub f_right_minus: f64,
-    pub f_right_plus: f64,
+    pub f_left_minus: <GS::F as SpatialFlux>::Unit,
+    pub f_left_plus: <GS::F as SpatialFlux>::Unit,
+    pub f_right_minus: <GS::F as SpatialFlux>::Unit,
+    pub f_right_plus: <GS::F as SpatialFlux>::Unit,
 }
 
-impl<GS: GalerkinScheme> Element<GS> {
-}
+impl<GS: GalerkinScheme> Element<GS> {}
 
 pub struct ElementStorage<U: Unknown> {
+    pub r_x: Buffer<f32>,
+
     pub u_k: Buffer<U>,
 
     pub u_left_minus: Buffer<U>,
@@ -73,15 +73,14 @@ pub enum FaceType<GS: GalerkinScheme> {
      * Boundary condition which depends on the interior side of the boundary as well as
      * a time parameter.
      */
-    Boundary(BoundaryCondition, GS::F)
+    Boundary(BoundaryCondition, <GS::F as SpatialFlux>::Unit),
 }
 
 pub struct BoundaryCondition {
     pub function_name: String,
 }
 
-impl BoundaryCondition {
-}
+impl BoundaryCondition {}
 
 pub struct Face<GS: GalerkinScheme> {
     pub face_type: FaceType<GS>,
@@ -90,7 +89,7 @@ pub struct Face<GS: GalerkinScheme> {
 pub struct Grid<GS: GalerkinScheme> {
     pub x_min: f64,
     pub x_max: f64,
-    pub elements: Vec<Element<GS>>
+    pub elements: Vec<Element<GS>>,
 }
 
 pub fn generate_grid<GS, Fx>(
@@ -103,26 +102,33 @@ pub fn generate_grid<GS, Fx>(
     right_boundary: Face<GS>,
     f: Fx,
 ) -> Grid<GS>
-where
-GS: GalerkinScheme,
-Fx: Fn(&Vector<f64>) -> GS::F,
+    where
+        GS: GalerkinScheme,
+        Fx: Fn(&Vector<f64>) -> GS::F,
 {
     let x_ks = compute_x_k(x_min, x_max, n_k, reference_element);
     let mut elements = vec![];
 
-    for i in 0..n_k {
-        let x_k = x_ks[i];
-
+    for (i, x_k) in x_ks.into_iter().enumerate() {
         let d_r_x_k = &operators.d_r * &x_k;
         let r_x = Vector::ones(d_r_x_k.size()).elediv(&d_r_x_k);
         let r_x_left = r_x[0];
         let r_x_right = r_x[reference_element.n_p as usize];
 
         let spatial_flux = f(&x_k);
+
+        let f_left_plus = match left_boundary.face_type {
+            FaceType::Interior(i) => {
+                let f: GS::F = f(&x_ks[i]);
+                f.last()
+            }
+            FaceType::Boundary(_, f) => f,
+        };
+
         elements.push(Element {
             index: 0,
             x_left: x_k[0],
-            x_right: x_k[x_k.len() - 1],
+            x_right: x_k[x_k.size() - 1],
             x_k,
             r_x,
             r_x_left,
@@ -133,15 +139,12 @@ Fx: Fn(&Vector<f64>) -> GS::F,
             },
             left_outward_normal: -1.,
             right_outward_normal: 1.,
-            f_left_minus: spatial_flux.left(),
-            f_left_plus: match left_boundary.face_type {
-                FaceType::Interior(i) => f(&x_ks[i]).right(),
-                FaceType::Boundary(_, f) => f,
-            },
-            f_right_minus: spatial_flux.right(),
+            f_left_minus: <GS::F as SpatialFlux>::first(&spatial_flux),
+            f_left_plus,
+            f_right_minus: <GS::F as SpatialFlux>::last(&spatial_flux),
             f_right_plus: match right_boundary.face_type {
-                FaceType::Interior(i) => f(&x_ks[i]).left(),
-                FaceType::Boundary(_, f) => f,
+                FaceType::Interior(i) => f(&x_ks[i]).first(),
+                FaceType::Boundary(_, f) => f.clone(),
             },
         });
     }
@@ -161,7 +164,7 @@ fn compute_x_k(x_min: f64, x_max: f64, n_k: i32, reference_element: &ReferenceEl
         let s = (&reference_element.rs + 1.) / 2.;
         s * diff + left
     };
-    0..n_k.map(|i| {
+    (0..n_k).map(|i| {
         transform(x_min + diff * i as f64)
     }).collect::<Vec<Vector<f64>>>()
 }

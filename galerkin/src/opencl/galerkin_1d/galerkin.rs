@@ -48,6 +48,12 @@ pub fn initialize_storage<GS, Fx>(
 {
     let mut result: Vec<ElementStorage<GS::U>> = vec![];
     for elt in &grid.elements {
+        let r_x: Vec<f32> = elt.r_x.data().iter()
+            .map(|&r| r as f32)
+            .collect();
+        let r_x = pro_que.buffer_builder()
+            .copy_host_slice(&r_x)
+            .build().unwrap();
         let u_k_host: Vec<GS::U> = u_0(&elt.x_k);
         let u_k = pro_que.buffer_builder()
             .copy_host_slice(&u_k_host)
@@ -68,6 +74,7 @@ pub fn initialize_storage<GS, Fx>(
             .len(u_k_host.len())
             .build().unwrap();
         result.push(ElementStorage {
+            r_x,
             u_k,
             u_left_minus,
             u_right_minus,
@@ -86,7 +93,7 @@ pub fn communicate<GS>(
     reference_element: &ReferenceElement,
     elt: &Element<GS>,
     elements: &Vec<Element<GS>>,
-    elt_storage: &mut ElementStorage<GS::U>,
+    elt_storage: &ElementStorage<GS::U>,
     storages: &Vec<ElementStorage<GS::U>>,
     pro_que: &ProQue,
 )
@@ -101,7 +108,7 @@ pub fn communicate<GS>(
                 .arg_named("neighbor", &storages[*i as usize].u_k)
                 .arg_named("index_in_neighbor", reference_element.n_p)
                 .build().unwrap(),
-            FaceType::Boundary(BoundaryCondition { function_name }) =>
+            FaceType::Boundary(BoundaryCondition { function_name }, _) =>
                 pro_que.kernel_builder(format!("communicate_external__{}", function_name))
                     .arg_named("destination", destination)
                     .arg_named("index_in_destination", 0)

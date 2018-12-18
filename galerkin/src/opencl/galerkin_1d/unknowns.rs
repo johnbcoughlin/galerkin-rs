@@ -63,5 +63,7 @@ pub fn initialize_residuals<T: OclPrm>(k: usize, n_p: i32, pro_que: &ProQue) -> 
     return repeat(repeat(T::default()).collect())
         .take(k)
         .map(|v: Vec<T>| pro_que.buffer_builder()
-            .copy_host_slice(v.as_slice()))
+            .copy_host_slice(v.as_slice())
+            .build().unwrap())
+        .collect()
 }
