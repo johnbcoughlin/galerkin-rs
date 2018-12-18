@@ -55,18 +55,27 @@ pub fn initialize_storage<GS, Fx>(
         let endpoint_supplier = || pro_que.buffer_builder()
             .len(1)
             .build().unwrap();
-        let (u_left_minus, u_right_minus, u_left_plus, u_right_plus) = (
+        let (u_left_minus, u_right_minus, u_left_plus, u_right_plus,
+            du_left, du_right) = (
+            endpoint_supplier(),
+            endpoint_supplier(),
             endpoint_supplier(),
             endpoint_supplier(),
             endpoint_supplier(),
             endpoint_supplier(),
         );
+        let u_k_rhs = pro_que.buffer_builder()
+            .len(u_k_host.len())
+            .build().unwrap();
         result.push(ElementStorage {
             u_k,
             u_left_minus,
             u_right_minus,
             u_left_plus,
             u_right_plus,
+            du_left,
+            du_right,
+            u_k_rhs,
         });
     }
     result
@@ -92,7 +101,7 @@ pub fn communicate<GS>(
                 .arg_named("neighbor", &storages[*i as usize].u_k)
                 .arg_named("index_in_neighbor", reference_element.n_p)
                 .build().unwrap(),
-            FaceType::Boundary(BoundaryCondition { function_name, .. }) =>
+            FaceType::Boundary(BoundaryCondition { function_name }) =>
                 pro_que.kernel_builder(format!("communicate_external__{}", function_name))
                     .arg_named("destination", destination)
                     .arg_named("index_in_destination", 0)
@@ -109,7 +118,10 @@ pub fn communicate<GS>(
     }
 }
 
-const INTERIOR_COMMUNICATION_KERNEL_FORMAT: &'static str = r#"
+
+pub fn prepare_communication_kernels(u_ident: &str, bc_idents: &Vec<String>) -> String {
+    let mut builder = string_builder::Builder::new(1_000);
+    let interior = format!(r#"
 __kernel void communicate_internal(
     __global {U}* destination,
     __global int index_in_destination,
@@ -118,9 +130,11 @@ __kernel void communicate_internal(
 ) {{
     destination[index_in_destination] = neighbor[index_in_neighbor];
 }}
-"#;
-
-const EXTERIOR_COMMUNICATION_KERNEL_FORMAT: &'static str = r#"
+"#, U = u_ident);
+    builder.append(interior);
+    builder.append("\n");
+    for ref bc_ident in bc_idents {
+        let exterior = format!(r#"
 __kernel void communicate_external__{boundary_value_kernel}(
     __global {U}* destination,
     __global int index_in_destination,
@@ -132,15 +146,7 @@ __kernel void communicate_external__{boundary_value_kernel}(
     {U} boundary_value = {boundary_value_kernel}(t, existing_value);
     destination[index_in_destination] = boundary_value;
 }}
-"#;
-
-pub fn prepare_communication_kernels(u_ident: &str, bc_idents: &Vec<String>) -> String {
-    let mut builder = string_builder::Builder::new(1_000);
-    let interior = format!(INTERIOR_COMMUNICATION_KERNEL_FORMAT, U = u_ident);
-    builder.append(interior);
-    builder.append("\n");
-    for ref bc_ident in bc_idents {
-        let exterior = format!(EXTERIOR_COMMUNICATION_KERNEL_FORMAT,
+"#,
                                U = u_ident, boundary_value_kernel = bc_ident);
         builder.append(exterior);
         builder.append("\n");

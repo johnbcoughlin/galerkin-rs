@@ -89,8 +89,10 @@ pub fn opencl_function(metadata: TokenStream, input: TokenStream) -> TokenStream
     let item: syn::Item = syn::parse(input).expect("failed to parse input");
 
     match item {
-        syn::Item::Struct(itemfn) => (),
-        _ => println!("AAAAHHHH"),
+        syn::Item::Fn(itemfn) => (),
+        _ => item.span().unstable()
+            .error("opencl_function may only be applied to top-level functions.")
+            .emit(),
     }
 
     let expanded = quote! {
