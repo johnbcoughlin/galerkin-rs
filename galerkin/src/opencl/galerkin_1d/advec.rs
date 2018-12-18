@@ -9,7 +9,7 @@ use galerkin_1d::grid::ReferenceElement;
 use galerkin_1d::operators::Operators;
 use ocl::{ProQue, Buffer};
 use ocl::Program;
-use opencl::galerkin_1d::unknowns::{U, unknown};
+use opencl::galerkin_1d::unknowns::{Unknown};
 use opencl::galerkin_1d::galerkin::prepare_communication_kernels;
 use opencl::galerkin_1d::unknowns::initialize_residuals;
 use opencl::galerkin_1d::galerkin::communicate;
@@ -17,6 +17,7 @@ use functions::range_kutta::*;
 use opencl::galerkin_1d::grid::Element;
 use opencl::galerkin_1d::operators::OperatorsStorage;
 use opencl::galerkin_1d::operators::store_operators;
+use opencl::galerkin_1d::grid::SpatialFlux;
 
 struct U {
     u: f32,
@@ -26,7 +27,9 @@ struct F {
     f: f32,
 }
 
-unknown!(U, f32, u);
+gen_unknown!(U, f32, u);
+
+impl SpatialFlux for F {}
 
 struct Scheme {}
 
@@ -125,13 +128,13 @@ fn apply_rhs_to_residual(
     }
 }
 
-fn rhs(reference_element: &ReferenceElement,
+fn rhs<'a>(reference_element: &ReferenceElement,
        elt: &Element<Scheme>,
-       elt_storage: &ElementStorage<U>,
+       elt_storage: &'a ElementStorage<U>,
        operators: &OperatorsStorage,
        pro_que: &ProQue,
        a: f64,
-) -> &Buffer<U> {
+) -> &'a Buffer<U> {
     let left_flux_kernel = pro_que.kernel_builder("advec_flux")
         .arg_named("u_minus", elt_storage.u_left_minus)
         .arg_named("u_plus", elt_storage.u_left_plus)
@@ -281,6 +284,7 @@ mod tests {
     use opencl::galerkin_1d::grid::{Grid, generate_grid, Face, FaceType};
     use opencl::galerkin_1d::galerkin::initialize_storage;
     use opencl::galerkin_1d::grid::BoundaryCondition;
+    use opencl::galerkin_1d::advec::F;
 
     #[test]
     fn test() {
@@ -300,7 +304,7 @@ mod tests {
         };
         let grid = generate_grid(
             -1.0, 1.0, 8, &reference_element, &operators, left_boundary, right_boundary,
-            move |_| 1.,
+            move |_| F { f: 1. },
         );
 
         advec_1d(

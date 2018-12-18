@@ -15,7 +15,7 @@ macro_rules! cl_type (
 );
 
 #[macro_export]
-macro_rules! unknown {
+macro_rules! gen_unknown {
     // Must capture T as tt because we will pass it to the cl_type macro.
     ($U:ident, $T:tt, $($field:ident),*) => {
         use ocl::OclPrm;
@@ -48,7 +48,7 @@ macro_rules! unknown {
 mod tests {
     use super::Unknown;
 
-    unknown!(Q, f32, a, b);
+    gen_unknown!(Q, f32, a, b);
 
     #[test]
     fn test_unknown() {

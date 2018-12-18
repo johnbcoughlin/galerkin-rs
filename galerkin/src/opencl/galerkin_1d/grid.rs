@@ -80,7 +80,7 @@ pub struct BoundaryCondition {
     pub function_name: String,
 }
 
-impl<'prog, GS:GalerkinScheme> BoundaryCondition {
+impl BoundaryCondition {
 }
 
 pub struct Face<GS: GalerkinScheme> {
