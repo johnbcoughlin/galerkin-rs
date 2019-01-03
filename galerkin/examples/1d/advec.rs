@@ -202,7 +202,7 @@ pub fn advec_1d_example() {
         move |_| LinearFlux(a),
     );
 
-    let operators = assemble_operators::<U>(&reference_element);
+    let operators = assemble_operators(&reference_element);
 
     advec_1d(&u_0, &grid, &reference_element, &operators, a);
 }

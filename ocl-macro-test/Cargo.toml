@@ -1,8 +1,0 @@
-[package]
-name = "ocl-macro-test"
-version = "0.1.0"
-authors = ["Jack Coughlin <johnbcoughlin@gmail.com>"]
-edition = "2018"
-
-[dependencies]
-ocl-macro = { path = "../ocl-macro" }

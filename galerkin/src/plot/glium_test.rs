@@ -3,8 +3,9 @@ extern crate rand;
 
 use galerkin::plot::glium::*;
 use galerkin::distmesh::distmesh_2d::*;
-use std::sync::mpsc::{self, Sender, Receiver};
+use std::sync::mpsc::{Sender};
 use std::thread;
+use std::time::Duration;
 
 fn main() {
     let mesh = ellipse();
@@ -12,10 +13,10 @@ fn main() {
     let f = move |sender: Sender<Vec<f64>>| {
         loop {
             let values = mesh_clone.points.iter()
-                .map(|point| rand::random::<f64>())
+                .map(|_| rand::random::<f64>())
                 .collect();
             sender.send(values).unwrap();
-            thread::sleep_ms(300);
+            thread::sleep(Duration::from_millis(300));
         }
     };
     run_inside_plot(mesh, f);

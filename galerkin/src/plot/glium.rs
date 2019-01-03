@@ -4,9 +4,8 @@ extern crate rand;
 use std::thread;
 use glium::{glutin, Surface};
 use distmesh::mesh::{Mesh, Point2D};
-use std::sync::mpsc::{self, Sender, Receiver};
+use std::sync::mpsc::{self, Sender};
 use std::f32;
-use glium::uniforms::{Uniforms, UniformValue};
 
 pub struct OpenGLPlot {
     mesh: Mesh,

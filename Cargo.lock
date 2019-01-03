@@ -746,22 +746,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "ocl-macro"
-version = "0.1.0"
-dependencies = [
- "ocl 0.19.1 (registry+https://github.com/rust-lang/crates.io-index)",
- "quote 0.6.3 (registry+https://github.com/rust-lang/crates.io-index)",
- "syn 0.15.22 (registry+https://github.com/rust-lang/crates.io-index)",
-]
-
-[[package]]
-name = "ocl-macro-test"
-version = "0.1.0"
-dependencies = [
- "ocl-macro 0.1.0",
-]
-
-[[package]]
 name = "openblas-src"
 version = "0.6.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"

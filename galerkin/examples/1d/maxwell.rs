@@ -260,7 +260,7 @@ pub fn maxwell_1d_example() {
         MaxwellsInteriorFlux {},
         &permittivity,
     );
-    let operators = assemble_operators::<EH>(&reference_element);
+    let operators = assemble_operators(&reference_element);
 
     maxwell_1d(&eh_0, &grid, &reference_element, &operators);
 }

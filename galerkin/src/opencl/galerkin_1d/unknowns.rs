@@ -60,9 +60,10 @@ mod tests {
 }
 
 pub fn initialize_residuals<T: OclPrm>(k: usize, n_p: i32, pro_que: &ProQue) -> Vec<Buffer<T>> {
-    return repeat(repeat(T::default()).collect())
+    repeat(repeat(T::default()).take(n_p as usize).collect())
         .take(k)
         .map(|v: Vec<T>| pro_que.buffer_builder()
+            .len(v.len())
             .copy_host_slice(v.as_slice())
             .build().unwrap())
         .collect()

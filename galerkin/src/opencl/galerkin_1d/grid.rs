@@ -1,16 +1,12 @@
 extern crate rulinalg;
 
 use opencl::galerkin_1d::galerkin::GalerkinScheme;
-use opencl::arrays::{self, CLVector};
 use rulinalg::vector::Vector;
 use opencl::galerkin_1d::unknowns::Unknown;
-use ocl::{OclPrm, Kernel};
-use ocl::builders::KernelBuilder;
 use std::clone::Clone;
 use galerkin_1d::grid::ReferenceElement;
 use galerkin_1d::operators::Operators;
 use ocl::Buffer;
-use std::marker::PhantomData;
 
 pub trait SpatialFlux {
     type Unit: Sized + Copy;
@@ -107,9 +103,44 @@ pub fn generate_grid<GS, Fx>(
         Fx: Fn(&Vector<f64>) -> GS::F,
 {
     let x_ks = compute_x_k(x_min, x_max, n_k, reference_element);
+    let n_k = n_k as usize;
     let mut elements = vec![];
 
-    for (i, x_k) in x_ks.into_iter().enumerate() {
+    let x_k = x_ks[0].clone();
+
+    let d_r_x_k = &operators.d_r * &x_k;
+    let r_x = Vector::ones(d_r_x_k.size()).elediv(&d_r_x_k);
+    let r_x_left = r_x[0];
+    let r_x_right = r_x[reference_element.n_p as usize];
+    let spatial_flux = f(&x_k);
+
+    let f_left_plus = match left_boundary.face_type {
+        FaceType::Interior(i) => spatial_flux.first(),
+        FaceType::Boundary(_, f) => f.clone(),
+    };
+
+    elements.push(Element {
+        index: 0,
+        x_left: x_k[0],
+        x_right: x_k[x_k.size() - 1],
+        x_k,
+        r_x,
+        r_x_left,
+        r_x_right,
+        left_face: left_boundary,
+        right_face: Face {
+            face_type: FaceType::Interior(1),
+        },
+        left_outward_normal: -1.,
+        right_outward_normal: 1.,
+        f_left_minus: <GS::F as SpatialFlux>::first(&spatial_flux),
+        f_left_plus,
+        f_right_minus: <GS::F as SpatialFlux>::last(&spatial_flux),
+        f_right_plus: f(&x_ks[1]).first(),
+    });
+
+    elements.extend((1..n_k - 1).map(|i| {
+        let x_k = x_ks[i].clone();
         let d_r_x_k = &operators.d_r * &x_k;
         let r_x = Vector::ones(d_r_x_k.size()).elediv(&d_r_x_k);
         let r_x_left = r_x[0];
@@ -117,38 +148,54 @@ pub fn generate_grid<GS, Fx>(
 
         let spatial_flux = f(&x_k);
 
-        let f_left_plus = match left_boundary.face_type {
-            FaceType::Interior(i) => {
-                let f: GS::F = f(&x_ks[i]);
-                f.last()
-            }
-            FaceType::Boundary(_, f) => f,
-        };
-
-        elements.push(Element {
-            index: 0,
+        Element {
+            index: i,
             x_left: x_k[0],
             x_right: x_k[x_k.size() - 1],
             x_k,
             r_x,
             r_x_left,
             r_x_right,
-            left_face: left_boundary,
-            right_face: Face {
-                face_type: FaceType::Interior(1),
-            },
+            left_face: Face { face_type: FaceType::Interior(i - 1) },
+            right_face: Face { face_type: FaceType::Interior(i + 1) },
             left_outward_normal: -1.,
             right_outward_normal: 1.,
             f_left_minus: <GS::F as SpatialFlux>::first(&spatial_flux),
-            f_left_plus,
+            f_left_plus: f(&x_ks[i - 1]).last(),
             f_right_minus: <GS::F as SpatialFlux>::last(&spatial_flux),
-            f_right_plus: match right_boundary.face_type {
-                FaceType::Interior(i) => f(&x_ks[i]).first(),
-                FaceType::Boundary(_, f) => f.clone(),
-            },
-        });
-    }
+            f_right_plus: f(&x_ks[i + 1]).first(),
+        }
+    }));
 
+    let x_k = x_ks[n_k as usize - 1].clone();
+
+    let d_r_x_k = &operators.d_r * &x_k;
+    let r_x = Vector::ones(d_r_x_k.size()).elediv(&d_r_x_k);
+    let r_x_left = r_x[0];
+    let r_x_right = r_x[reference_element.n_p as usize];
+    let spatial_flux = f(&x_k);
+    let f_right_plus = match right_boundary.face_type {
+        FaceType::Interior(i) => spatial_flux.first(),
+        FaceType::Boundary(_, f) => f.clone(),
+    };
+
+    elements.push(Element {
+        index: n_k - 1,
+        x_left: x_k[0],
+        x_right: x_k[x_k.size() - 1],
+        x_k,
+        r_x,
+        r_x_left,
+        r_x_right,
+        left_face: Face { face_type: FaceType::Interior(n_k - 1) },
+        right_face: right_boundary,
+        left_outward_normal: -1.,
+        right_outward_normal: 1.,
+        f_left_minus: <GS::F as SpatialFlux>::first(&spatial_flux),
+        f_left_plus: f(&x_ks[n_k - 2]).last(),
+        f_right_minus: <GS::F as SpatialFlux>::last(&spatial_flux),
+        f_right_plus,
+    });
 
     Grid {
         x_min,

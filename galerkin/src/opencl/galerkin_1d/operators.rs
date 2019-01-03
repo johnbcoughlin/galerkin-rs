@@ -24,6 +24,7 @@ pub fn store_operators(operators: &Operators, pro_que: &ProQue) -> OperatorsStor
         .map(|&x| x as f32)
         .collect();
     let v = pro_que.buffer_builder()
+        .len(v.len())
         .copy_host_slice(v.as_slice())
         .flags(MemFlags::new().read_only())
         .build().unwrap();
@@ -33,6 +34,7 @@ pub fn store_operators(operators: &Operators, pro_que: &ProQue) -> OperatorsStor
         .map(|&x| x as f32)
         .collect();
     let d_r = pro_que.buffer_builder()
+        .len(d_r.len())
         .copy_host_slice(d_r.as_slice())
         .flags(MemFlags::new().read_only())
         .build().unwrap();
@@ -42,6 +44,7 @@ pub fn store_operators(operators: &Operators, pro_que: &ProQue) -> OperatorsStor
         .map(|&x| x as f32)
         .collect();
     let lift = pro_que.buffer_builder()
+        .len(lift.len())
         .copy_host_slice(lift.as_slice())
         .flags(MemFlags::new().read_only())
         .build().unwrap();

@@ -9,8 +9,7 @@ use opencl::galerkin_1d::grid::ElementStorage;
 use opencl::galerkin_1d::galerkin::initialize_storage;
 use galerkin_1d::grid::ReferenceElement;
 use galerkin_1d::operators::Operators;
-use ocl::{ProQue, Buffer};
-use ocl::Program;
+use ocl::{ProQue, Program, Buffer, Context};
 use opencl::galerkin_1d::unknowns::{Unknown};
 use opencl::galerkin_1d::galerkin::prepare_communication_kernels;
 use opencl::galerkin_1d::unknowns::initialize_residuals;
@@ -65,16 +64,20 @@ Fx: Fn(&Vector<f64>) -> Vec<U>
     let n_t = (final_time / dt).ceil() as i32;
     let dt = final_time / n_t as f64;
 
-    let mut t: f64 = 0.0;
+    let t: f64 = 0.0;
 
-    // TODO use spatial flux instead
     let a = 1.0;
 
-    let mut program_builder = ProQue::builder();
-    program_builder.src(APPLY_RESIDUAL_KERNEL)
+    let context = Context::builder().build().expect("could not create OpenCL context");
+    let mut program_builder = Program::builder();
+    program_builder
+        .src(U::cl_struct_def())
+        .src(APPLY_RESIDUAL_KERNEL)
         .src(AUGMENT_RESIDUAL_KERNEL)
         .src(FREEFLOW_BC_KERNEL)
-        .src(SIN_BC_KERNEL);
+        .src(SIN_BC_KERNEL)
+        .src(ADVEC_FLUX_KERNEL)
+        .src(ADVEC_RHS_KERNEL);
     let communication_kernels = prepare_communication_kernels(
         &U::cl_struct_type(), &vec![
             String::from("freeflow_bc"),
@@ -82,12 +85,15 @@ Fx: Fn(&Vector<f64>) -> Vec<U>
         ]
     );
     program_builder.src(communication_kernels);
-    let pro_que: ProQue = program_builder.build().unwrap();
+    let pro_que: ProQue = ProQue::builder()
+        .prog_bldr(program_builder)
+        .dims(reference_element.n_p)
+        .build().expect("could not build ProQue");
 
     let mut storage: Vec<ElementStorage<U>> =
         initialize_storage(u_0, reference_element.n_p, grid, operators, &pro_que);
     let operator_storage = store_operators(operators, &pro_que);
-    let mut residuals = initialize_residuals(grid.elements.len(), reference_element.n_p, &pro_que);
+    let residuals = initialize_residuals(grid.elements.len(), reference_element.n_p, &pro_que);
 
     for epoch in 0..3 {
         for int_rk in 0..5 {
@@ -137,8 +143,8 @@ fn apply_rhs_to_residual(
         .build().unwrap();
 
     unsafe {
-        augment_residual.enq();
-        apply_residual.enq();
+        augment_residual.enq().expect("kernel error");
+        apply_residual.enq().expect("kernel error");
     }
 }
 
@@ -154,7 +160,7 @@ fn rhs<'a>(reference_element: &ReferenceElement,
         .arg_named("u_plus", &elt_storage.u_left_plus)
         .arg_named("f_minus", &elt.f_left_minus)
         .arg_named("f_plus", &elt.f_left_plus)
-        .arg_named("outward_normal", &elt.left_outward_normal)
+        .arg_named("outward_normal", elt.left_outward_normal as f32)
         .arg_named("output", &elt_storage.du_left)
         .global_work_size(1)
         .build().unwrap();
@@ -163,13 +169,13 @@ fn rhs<'a>(reference_element: &ReferenceElement,
         .arg_named("u_plus", &elt_storage.u_right_plus)
         .arg_named("f_minus", &elt.f_right_minus)
         .arg_named("f_plus", &elt.f_right_plus)
-        .arg_named("outward_normal", &elt.right_outward_normal)
+        .arg_named("outward_normal", elt.right_outward_normal as f32)
         .arg_named("output", &elt_storage.du_right)
         .global_work_size(1)
         .build().unwrap();
     unsafe {
-        left_flux_kernel.enq();
-        right_flux_kernel.enq();
+        left_flux_kernel.enq().expect("kernel error");
+        right_flux_kernel.enq().expect("kernel error");
     }
 
     let rhs_kernel = pro_que.kernel_builder("advec_rhs")
@@ -195,53 +201,53 @@ pub const APPLY_RESIDUAL_KERNEL: &'static str = r#"
 __kernel void apply_residual(
     __global float* residual,
     __global float* u,
-    __global float rkb
+    float rkb
 ) {
-    int i = get_global_id();
+    int i = get_global_id(0);
     u[i] = u[i] + residual[i] * rkb;
 }
 "#;
 
 pub const AUGMENT_RESIDUAL_KERNEL: &'static str = r#"
 __kernel void augment_residual(
-    __global float* residual,
-    __global float* rhs_u,
-    __global float rka,
-    __global float dt
+    __global cl_U* residual,
+    __global cl_U* rhs_u,
+    float rka,
+    float dt
 ) {
-    int i = get_global_id();
-    residual[i] = residual[i] * rka + rhs_u[i] * dt;
+    int i = get_global_id(0);
+    residual[i] = (cl_U) {residual[i].u * rka + rhs_u[i].u * dt};
 }
 "#;
 
 pub const ADVEC_FLUX_KERNEL: &'static str = r#"
 __kernel void advec_flux(
-    __global float* u_minus,
-    __global float* u_plus,
-    __global float* f_minus,
-    __global float* f_plus,
-    __global float outward_normal,
-    __global float* output
+    __global cl_U* u_minus,
+    __global cl_U* u_plus,
+    float f_minus,
+    float f_plus,
+    float outward_normal,
+    __global cl_U* output
 ) {
-    int i = get_global_id();
+    int i = get_global_id(0);
 
-    float flux_minus = u_minus[i] * f_minus[i];
-    float flux_plus = u_plus[i] * f_plus[i];
+    float flux_minus = u_minus[i].u * f_minus;
+    float flux_plus = u_plus[i].u * f_plus;
     float avg = flux_minus + flux_plus;
     float jump = flux_minus * outward_normal - flux_plus * outward_normal;
 
     float flux_numerical = avg + jump / 2.0;
 
-    output[i] = (flux_minus - flux_numerical) * outward_normal
+    output[i] = (cl_U) {(flux_minus - flux_numerical) * outward_normal};
 }
 "#;
 
 pub const ADVEC_RHS_KERNEL: &'static str = r#"
 __kernel void advec_rhs(
     // the total number of nodes per element
-    __global int n_p,
+    int n_p,
     // the number of nodes on a face
-    __global int n_f,
+    int n_f,
     // the n_p dimensioned array of unknowns on this element
     __global float* u,
     __global float* du_left,
@@ -249,17 +255,17 @@ __kernel void advec_rhs(
     // the n_p * n_p d_r matrix, in a row-major format
     __global float* d_r,
     __global float* r_x,
-    __global float r_x_left,
-    __global float r_x_right,
+    float r_x_left,
+    float r_x_right,
     __global float* lift,
-    __global float a,
+    float a,
 
     __global float* output
 ) {
-    int i = get_global_id();
+    int i = get_global_id(0);
 
     float d_r_u = 0.0;
-    for (int j = 0; j < n_p, j++) {
+    for (int j = 0; j < n_p; j++) {
         float d_r_ij = d_r[j + i * n_p];
         d_r_u += d_r_ij * u[j];
     }
@@ -279,14 +285,14 @@ __kernel void advec_rhs(
 "#;
 
 pub const FREEFLOW_BC_KERNEL: &'static str = r#"
-__kernel float freeflow_bc(float t, float u) {
+static cl_U freeflow_bc(float t, cl_U u) {
     return u;
 }
 "#;
 
 pub const SIN_BC_KERNEL: &'static str = r#"
-__kernel float sin_bc(float t, float u) {
-    return -sin(a * t);
+static cl_U sin_bc(float t, cl_U u) {
+    return (cl_U) { -sin(1.0 * t) };
 }
 "#;
 

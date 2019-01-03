@@ -10,7 +10,7 @@ extern crate quote;
 extern crate ocl;
 
 use proc_macro::{TokenStream, Span, Diagnostic, Level};
-use syn::{parse_macro_input, parse_quote, Data, Type, TypePath, Path, PathSegment, Ident, DataStruct, DeriveInput, Field, Fields, FieldsNamed, GenericParam, Generics, Index};
+use syn::{parse_macro_input, Data, Type, TypePath, Path, PathSegment, Ident, DataStruct, DeriveInput, Field, Fields, FieldsNamed, GenericParam, Generics, Index};
 use syn::punctuated::Punctuated;
 use syn::token::Comma;
 use syn::spanned::Spanned;
