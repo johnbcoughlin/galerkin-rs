@@ -1,24 +1,29 @@
 extern crate ocl;
 extern crate rulinalg;
+#[macro_use]
+extern crate galerkin;
 
-use rulinalg::vector::Vector;
 use std::f64::consts;
-use opencl::galerkin_1d::galerkin::GalerkinScheme;
-use opencl::galerkin_1d::grid::Grid;
-use opencl::galerkin_1d::grid::ElementStorage;
-use opencl::galerkin_1d::galerkin::initialize_storage;
-use galerkin_1d::grid::ReferenceElement;
-use galerkin_1d::operators::Operators;
+use galerkin::opencl::galerkin_1d::galerkin::GalerkinScheme;
+use galerkin::opencl::galerkin_1d::grid::ElementStorage;
 use ocl::{ProQue, Program, Buffer, Context};
-use opencl::galerkin_1d::unknowns::{Unknown};
-use opencl::galerkin_1d::galerkin::prepare_communication_kernels;
-use opencl::galerkin_1d::unknowns::initialize_residuals;
-use opencl::galerkin_1d::galerkin::communicate;
-use functions::range_kutta::*;
-use opencl::galerkin_1d::grid::Element;
-use opencl::galerkin_1d::operators::OperatorsStorage;
-use opencl::galerkin_1d::operators::store_operators;
-use opencl::galerkin_1d::grid::SpatialFlux;
+use galerkin::opencl::galerkin_1d::unknowns::{Unknown};
+use std::iter::repeat;
+use galerkin::opencl::galerkin_1d::galerkin::prepare_communication_kernels;
+use galerkin::opencl::galerkin_1d::unknowns::initialize_residuals;
+use galerkin::opencl::galerkin_1d::galerkin::communicate;
+use galerkin::functions::range_kutta::*;
+use galerkin::opencl::galerkin_1d::grid::Element;
+use galerkin::opencl::galerkin_1d::operators::OperatorsStorage;
+use galerkin::opencl::galerkin_1d::operators::store_operators;
+use galerkin::opencl::galerkin_1d::grid::SpatialFlux;
+use galerkin::galerkin_1d::grid::ReferenceElement;
+use galerkin::galerkin_1d::operators::{Operators, assemble_operators};
+use galerkin::opencl::galerkin_1d::grid::{Grid, generate_grid, Face, FaceType};
+use galerkin::opencl::galerkin_1d::galerkin::initialize_storage;
+use galerkin::opencl::galerkin_1d::grid::BoundaryCondition;
+use rulinalg::vector::Vector;
+use std::fmt::Debug;
 
 pub struct F(f32);
 
@@ -47,14 +52,16 @@ impl GalerkinScheme for Scheme {
     type F = F;
 }
 
-pub fn advec_1d<Fx>(
+pub fn advec_1d<Fx, Fu>(
     reference_element: &ReferenceElement,
     operators: &Operators,
     grid: &Grid<Scheme>,
-    u_0: Fx
+    u_0: Fx,
+    mut solution_callback: Fu
 )
 where
-Fx: Fn(&Vector<f64>) -> Vec<U>
+Fx: Fn(&Vector<f64>) -> Vec<U>,
+Fu: FnMut(&Vec<U>)
 {
     let final_time = 1.3;
 
@@ -95,7 +102,8 @@ Fx: Fn(&Vector<f64>) -> Vec<U>
     let operator_storage = store_operators(operators, &pro_que);
     let residuals = initialize_residuals(grid.elements.len(), reference_element.n_p, &pro_que);
 
-    for epoch in 0..3 {
+    for epoch in 0..10 {
+        println!("here! {}", epoch);
         for int_rk in 0..5 {
             let t = t + RKC[int_rk] * dt;
 
@@ -110,8 +118,17 @@ Fx: Fn(&Vector<f64>) -> Vec<U>
 
                 apply_rhs_to_residual(int_rk, elt, storage, residuals_u, &operator_storage,
                     reference_element, &pro_que, dt, a);
+
             }
+            &pro_que.finish().unwrap();
         }
+        let mut u = vec![];
+        for ref storage in storage.iter() {
+            let mut slice = vec![U::default(); reference_element.n_p as usize];
+            storage.u_k.read(&mut slice).enq().unwrap();
+            u.extend_from_slice(slice.as_slice());
+        }
+//        solution_callback(&u);
     }
 }
 
@@ -127,6 +144,8 @@ fn apply_rhs_to_residual(
     a: f64,
 ) {
     let rhs = rhs(reference_element, elt, elt_storage, operators, pro_que, a);
+
+    debug_buffer(rhs);
 
     let augment_residual = pro_que.kernel_builder("augment_residual")
         .arg_named("residual", residual_u)
@@ -179,7 +198,7 @@ fn rhs<'a>(reference_element: &ReferenceElement,
     }
 
     let rhs_kernel = pro_que.kernel_builder("advec_rhs")
-        .arg_named("n_p", reference_element.n_p)
+        .arg_named("n_p", reference_element.n_p + 1)
         .arg_named("n_f", 1)
         .arg_named("u", &elt_storage.u_k)
         .arg_named("du_left", &elt_storage.du_left)
@@ -191,8 +210,11 @@ fn rhs<'a>(reference_element: &ReferenceElement,
         .arg_named("lift", &operators.lift)
         .arg_named("a", a as f32)
         .arg_named("output", &elt_storage.u_k_rhs)
-        .global_work_size(reference_element.n_p)
+        .global_work_size(reference_element.n_p + 1)
         .build().unwrap();
+    unsafe {
+        rhs_kernel.enq().expect("kernel error");
+    }
 
     &elt_storage.u_k_rhs
 }
@@ -250,8 +272,8 @@ __kernel void advec_rhs(
     int n_f,
     // the n_p dimensioned array of unknowns on this element
     __global float* u,
-    __global float* du_left,
-    __global float* du_right,
+    __global cl_U* du_left,
+    __global cl_U* du_right,
     // the n_p * n_p d_r matrix, in a row-major format
     __global float* d_r,
     __global float* r_x,
@@ -273,12 +295,12 @@ __kernel void advec_rhs(
     float a_rx = -r_x[i] * a;
     float rhs_u = a_rx * d_r_u;
 
-    float scaled_du_left = r_x_left * du_left[0];
-    float scaled_du_right = r_x_right * du_right[0];
+    float scaled_du_left = r_x_left * du_left[0].u;
+    float scaled_du_right = r_x_right * du_right[0].u;
 
     float lifted_flux = 0.0;
-    lifted_flux += lift[2 * i] * du_left[0];
-    lifted_flux += lift[2 * i] * du_right[0];
+    lifted_flux += lift[2 * i] * du_left[0].u;
+    lifted_flux += lift[2 * i + 1] * du_right[0].u;
 
     output[i] = rhs_u + lifted_flux;
 }
@@ -296,47 +318,41 @@ static cl_U sin_bc(float t, cl_U u) {
 }
 "#;
 
-#[cfg(test)]
-mod tests {
-    use super::{advec_1d, U};
-    use galerkin_1d::grid::ReferenceElement;
-    use galerkin_1d::operators::{Operators, assemble_operators};
-    use opencl::galerkin_1d::grid::{Grid, generate_grid, Face, FaceType};
-    use opencl::galerkin_1d::galerkin::initialize_storage;
-    use opencl::galerkin_1d::grid::BoundaryCondition;
-    use opencl::galerkin_1d::advec::F;
-    use rulinalg::vector::Vector;
+pub fn main() {
+    let reference_element = ReferenceElement::legendre(5);
+    let operators = assemble_operators(&reference_element);
+    let left_boundary = Face {
+        face_type: FaceType::Boundary(
+            BoundaryCondition { function_name: "sin_bc".to_string() },
+            1.,
+        ),
+    };
+    let right_boundary = Face {
+        face_type: FaceType::Boundary(
+            BoundaryCondition { function_name: "freeflow_bc".to_string() },
+            1.,
+        ),
+    };
+    let grid = generate_grid(
+        -1.0, 1.0, 8, &reference_element, &operators, left_boundary, right_boundary,
+        move |_| F(1.),
+    );
 
-    #[test]
-    fn test() {
-        let reference_element = ReferenceElement::legendre(5);
-        let operators = assemble_operators(&reference_element);
-        let left_boundary = Face {
-            face_type: FaceType::Boundary(
-                BoundaryCondition { function_name: "sin_bc".to_string()},
-                1.,
-            ),
-        };
-        let right_boundary = Face {
-            face_type: FaceType::Boundary(
-                BoundaryCondition { function_name: "freeflow_bc".to_string()},
-                1.,
-            ),
-        };
-        let grid = generate_grid(
-            -1.0, 1.0, 8, &reference_element, &operators, left_boundary, right_boundary,
-            move |_| F(1.),
-        );
+    advec_1d(
+        &reference_element,
+        &operators,
+        &grid,
+        &u_0,
+        |u| println!("{:?}", u),
+    );
+}
 
-        advec_1d(
-            &reference_element,
-            &operators,
-            &grid,
-            &u_0,
-        );
-    }
+fn u_0(xs: &Vector<f64>) -> Vec<U> {
+    xs.iter().map(|x: &f64| U { u: x.sin() as f32 }).collect()
+}
 
-    fn u_0(xs: &Vector<f64>) -> Vec<U> {
-        xs.iter().map(|x: &f64| U { u: x.sin() as f32 }).collect()
-    }
+fn debug_buffer<T: OclPrm>(buf: &Buffer<T>) {
+    let mut u: Vec<T> = repeat(T::default()).take(buf.len()).collect();
+    buf.read(&mut u).enq().unwrap();
+    println!("{}: {:?}", buf.len(), u);
 }

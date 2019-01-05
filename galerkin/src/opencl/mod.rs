@@ -1,1 +1,1 @@
-mod galerkin_1d;
+pub mod galerkin_1d;

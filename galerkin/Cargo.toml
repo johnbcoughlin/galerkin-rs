@@ -70,3 +70,7 @@ path = "examples/2d/maxwell/main.rs"
 [[bin]]
 name = "euler-2d"
 path = "examples/2d/euler/main.rs"
+
+[[bin]]
+name = "advec-opencl-1d"
+path = "examples/opencl/1d/advec.rs"
