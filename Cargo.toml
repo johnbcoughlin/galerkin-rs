@@ -1,6 +1,7 @@
 [workspace]
 members = [
     "galerkin",
+    "cl-funcs",
     "cl-structs",
     "cl-structs-derive",
 ]

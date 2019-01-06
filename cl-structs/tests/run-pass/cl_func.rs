@@ -8,4 +8,7 @@ fn my_func() {
 }
 
 fn main() {
+    my_func();
+    my_func_src();
+    my_func_kernel();
 }

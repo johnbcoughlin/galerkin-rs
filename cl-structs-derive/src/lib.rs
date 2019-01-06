@@ -16,6 +16,10 @@ use syn::token::Comma;
 use syn::spanned::Spanned;
 use quote::*;
 
+mod model;
+
+use model::*;
+
 #[proc_macro_derive(ocl::OclPrm)]
 pub fn ocl_prm_derive(input: proc_macro::TokenStream) -> TokenStream {
     println!("okay here we are");
@@ -85,19 +89,67 @@ fn is_of_type_f32(ty: &Type) -> bool {
 }
 
 #[proc_macro_attribute]
-pub fn opencl_function(metadata: TokenStream, input: TokenStream) -> TokenStream {
+pub fn opencl_kernel(metadata: TokenStream, input: TokenStream) -> TokenStream {
     let item: syn::Item = syn::parse(input).expect("failed to parse input");
 
     match item {
-        syn::Item::Fn(itemfn) => (),
+        syn::Item::Fn(syn::ItemFn {decl}) => ,
         _ => item.span().unstable()
             .error("opencl_function may only be applied to top-level functions.")
             .emit(),
     }
 
     let expanded = quote! {
-fn foo() {}
+fn my_func() {}
+fn my_func_src() {}
 };
 
     TokenStream::from(expanded)
+}
+
+fn expand_opencl_function(itemfn: syn::ItemFn) -> OpenclFunctionExpansion {
+}
+
+fn validate_original_function(itemfn: syn::ItemFn) -> Option<Func> {
+    match itemfn.decl.output {
+        syn::ReturnType::Default => {
+            decl.span().unstable()
+                .error("Function must have a non-() return type")
+                .emit();
+            None
+        },
+        syn::ReturnType::Type(_, Box(ty)) => match ty {
+            Type::Path(TypePath {})
+        }
+    }?;
+}
+
+fn generate_kernel_src(itemfn: syn::ItemFn) -> Option<TokenStream> {
+    let statements = itemfn.block.stmts;
+    itemfn.dec
+}
+
+fn generate_kernel_decl(func: Func) -> String {
+    let mut result = String::new();
+    result.push_str(&format!("__kernel void {}(", func.name));
+    for param in &func.params {
+        result.push_str(&format!(
+            "{} {},\n", param.param_type.as_cl_type(), param.ident));
+    }
+    result.push_str(")");
+    result
+}
+
+fn generate_kernel_body() -> Option<TokenStream> {
+
+}
+
+fn generate_kernel_invocation(itemfn: syn::ItemFn) -> Option<TokenStream> {
+
+}
+
+struct OpenclFunctionExpansion {
+    original: TokenStream,
+    src: TokenStream,
+    kernel_invocation: TokenStream,
 }

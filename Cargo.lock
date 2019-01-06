@@ -120,6 +120,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "cl-funcs"
+version = "0.1.0"
+dependencies = [
+ "ocl 0.19.1 (registry+https://github.com/rust-lang/crates.io-index)",
+]
+
+[[package]]
 name = "cl-structs"
 version = "0.1.0"
 dependencies = [
