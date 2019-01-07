@@ -1,5 +1,6 @@
 #![feature(trace_macros)]
 #![feature(concat_idents)]
+#![feature(arbitrary_self_types)]
 #![recursion_limit="256"]
 
 extern crate ocl;
@@ -8,9 +9,11 @@ extern crate mashup;
 
 use ocl::OclPrm;
 use std::ops::*;
-use std::marker::PhantomData;
 use std::cell::{RefCell};
+use std::rc::Rc;
+use self::Like::*;
 
+#[derive(Debug)]
 struct DryRunContext {
     name: String,
     params: RefCell<Vec<String>>,
@@ -19,27 +22,27 @@ struct DryRunContext {
 }
 
 impl DryRunContext {
-    fn new(name: &str) -> Self {
-        let result = DryRunContext {
+    fn new(name: &str) -> Rc<Self> {
+        let result = Rc::new(DryRunContext {
             name: String::from(name),
             ident_count: RefCell::new(0),
             body: RefCell::new("".to_string()),
             params: RefCell::new(vec![]),
-        };
-        result.append_stmt("int global_id = get_global_id(0)");
+        });
+        result.clone().append_stmt("int global_id = get_global_id(0)");
         result
     }
 
-    pub fn src<F, T>(&self, f: F) -> String
+    pub fn src<F, T>(self: &Rc<Self>, f: F) -> String
         where
-            F: FnOnce() -> T,
-            T: DryRun + DryRunRValue,
+            F: FnOnce() -> Like<T>,
+            T: ClPrim,
     {
-        let output: T = f();
+        let output: Like<T> = f();
         // output is always passed as a buffer so that we may set it
         self.params.borrow_mut().push(
-            format!("{}* output", <T::ExprType as ClPrim>::cl_type()));
-        self.append_stmt(&format!("output[global_id] = {}", output.val()));
+            format!("{}* output", <T as ClPrim>::cl_type()));
+        self.append_stmt(&format!("output[global_id] = {}", output.unwrap_dry_run().expr_name));
 
         let mut src: String = String::from("");
         src.push_str(&format!("__kernel void {}(\n\t", self.name));
@@ -50,21 +53,36 @@ impl DryRunContext {
         src
     }
 
-    pub fn append_stmt(&self, stmt: &str) {
+    pub fn append_stmt(self: &Rc<Self>, stmt: &str) {
         let mut body = self.body.borrow_mut();
         body.push_str("\t");
         body.push_str(stmt);
         body.push_str(";\n");
     }
 
-    pub fn var<'run, T: DryRunLValue<'run>>(&'run self, name: &str) -> T {
+    fn new_var<T: ClPrim>(self: &Rc<Self>, name: &str) -> Like<T> {
         // output is a reserved parameter name
         assert_ne!(name, "output");
         // global_id is a reserved parameter name
         assert_ne!(name, "global_id");
+        DryRun(Handle {
+            expr_name: String::from(name),
+            ctx: self.clone(),
+        })
+    }
+
+    fn param<T: ClPrim>(self: &Rc<Self>, name: &str) -> Like<T> {
         self.params.borrow_mut().push(
-            format!("{} {}", <T::ClType as ClPrim>::cl_type(), name.to_string()));
-        T::new(self, name)
+            format!("{} {}", <T as ClPrim>::cl_type(), name.to_string()));
+        self.new_var(name)
+    }
+
+    fn next_var<T: ClPrim>(self: &Rc<Self>) -> Like<T> {
+        let mut tmp = self.ident_count.borrow_mut();
+        let ident_count_borrow = tmp.deref_mut();
+        let expr_name = format!("v{}", *ident_count_borrow);
+        *ident_count_borrow += 1;
+        self.new_var(&expr_name)
     }
 }
 
@@ -73,215 +91,136 @@ struct DryRunHandle<'run> {
     ctx: &'run DryRunContext,
 }
 
+#[derive(Debug)]
+pub struct Handle {
+    expr_name: String,
+    ctx: Rc<DryRunContext>,
+}
+
 // Common traits
 
-trait DryRun {
-    type ExprType: ClPrim;
+pub trait DryRunMul<RHS = Self> {
+    fn dry_run_mul(lhs: &str, rhs: &str) -> String;
+}
 
-    fn handle(&self) -> &DryRunHandle;
+pub trait ClPrim: OclPrm {
+    fn cl_type() -> String;
+}
+
+#[derive(Debug)]
+pub enum Like<T: ClPrim> {
+    Actual(T),
+    DryRun(Handle),
+}
+
+impl<T: ClPrim> Like<T> {
+    fn unwrap_actual(self) -> T {
+        match self {
+            Actual(t) => t,
+            DryRun(_) => panic!("Expected Like::Real"),
+        }
+    }
+
+    fn unwrap_dry_run(self) -> Handle {
+        match self {
+            Actual(_) => panic!("Expected Like::DryRun"),
+            DryRun(h) => h,
+        }
+    }
+
+    fn expr_name(&self) -> String {
+        match self {
+            Actual(_) => panic!("Expected Like::DryRun"),
+            DryRun(h) => h.expr_name.clone(),
+        }
+    }
+}
+
+impl<T: ClPrim> Mul for Like<T>
+where
+    T: Mul<T, Output=T> + DryRunMul {
+    type Output = Self;
+
+    fn mul(self, rhs: Self) -> Self {
+        match self {
+            Actual(t) => Actual(t * rhs.unwrap_actual()),
+            DryRun(handle) => {
+                let result = handle.ctx.next_var();
+                let stmt = format!("{} {} = {}", T::cl_type(), result.expr_name(),
+                                   T::dry_run_mul(&handle.expr_name, &rhs.unwrap_dry_run().expr_name));
+                handle.ctx.append_stmt(&stmt);
+                result
+            }
+        }
+    }
 }
 
 trait DryRunLValue<'run> {
     type ClType: ClPrim;
 
     fn new(ctx: &'run DryRunContext, name: &str) -> Self;
+
+    fn next(ctx: &'run DryRunContext) -> Self;
 }
 
-trait DryRunRValue {
-    fn val(&self) -> String;
-}
-
-trait DryRunMul<RHS = Self> {
-    fn mul(lhs: &str, rhs: &str) -> String;
-}
-
-trait ClPrim: OclPrm {
-    fn cl_type() -> String;
-}
-
-// An opencl primitive value, like float
-trait ClFuncScalar<T: ClPrim>: Sized + Mul<Output=Self> {}
-
-// A marker trait for structs.
-trait ClFuncAtom<T: ClPrim>: Sized {}
-
-// Dry run value of a struct type
-struct DryRunClAtom<'run, T: ClPrim> {
-    _marker: PhantomData<T>,
-    handle: DryRunHandle<'run>,
-}
-
-impl<'run, T: ClPrim> DryRun for DryRunClAtom<'run, T> {
-    type ExprType = T;
-
-    fn handle(&self) -> &DryRunHandle {
-        &self.handle
-    }
-}
-
-impl<'run, T: ClPrim> ClFuncAtom<T> for DryRunClAtom<'run, T> {}
-
-impl<'run, T: ClPrim> DryRunLValue<'run> for DryRunClAtom<'run, T> {
-    type ClType = T;
-
-    fn new(ctx: &'run DryRunContext, name: &str) -> Self {
-        DryRunClAtom {
-            _marker: PhantomData,
-            handle: DryRunHandle {
-                expr_name: String::from(name),
-                ctx
-            }
-        }
-    }
-}
-
-macro_rules! atom_accessors (
-    ($S:ident, {$($field:ident: $T:ty),*}) => {
+macro_rules! atom_accessors {
+    ($S:ident, {$($field:ident: $T:ty),+}) => {
         mashup! {
-            m["accessorTrait"] = $S Accessor;
-            m["creatorTrait"] = $S Creator;
-            $(
-                m["type" $field] = TypeOf_ $field;
-            )*
+            m["trait"] = $S like;
         }
 
         m! {
-            pub trait "accessorTrait" {
-                $(type "type" $ field;
-                )*
-                $(fn $field(& self) -> Self::"type" $ field;)*
+            pub trait "trait" {
+                $(fn $field(& self) -> Like<$T>;)+
+
             }
         }
 
         m! {
-            pub trait "creatorTrait" {
-                $(type "type" $ field;
-                )*
-                fn new($($field: )*) -> Self;
-            }
-        }
-
-        m! {
-            impl "accessorTrait" for $S {
-                $(type "type" $field = $T;
-                )*
-
-                $(fn $field(&self) -> Self::"outputType" $field {
-                    self.$field
+            impl "trait" for Like<$S> {
+                $(fn $field(&self) -> Like<$T> {
+                    match self {
+                        Like::Actual(t) => Like::Actual(t.$field),
+                        Like::DryRun(handle) => {
+                            let result = handle.ctx.next_var();
+                            let stmt = format!("{} {} = {}.{}", <$T as ClPrim>::cl_type(),
+                                result.expr_name(), handle.expr_name, stringify!($field));
+                            handle.ctx.clone().append_stmt(&stmt);
+                            result
+                        },
+                    }
                 })*
             }
         }
 
         m! {
-            impl "creatorTrait" for $S {
-                $(type "type" $field = $T;
-                )*
-
-                fn new($($field: "type" $field)*) -> Self {
-                    S { $($field,)* }
+            impl $S {
+                fn new($($field: Like<$T>,)+) -> Like<Self> {
+                    let fields = vec![$(&$field,)+];
+                    assert!(!fields.is_empty());
+                    let ref arg1 = fields[0];
+                    match arg1 {
+                        Like::Actual(_) => Like::Actual($S {
+                            $($field: Like::unwrap_actual($field),
+                            )+
+                        }),
+                        Like::DryRun(handle) => {
+                            let result = handle.ctx.next_var();
+                            let type_name = <$S as ClPrim>::cl_type();
+                            let field_names: String = fields.iter()
+                                .map(|f| f.expr_name())
+                                .collect::<Vec<String>>().join(", ");
+                            let stmt = format!("{} {} = ({}) {{ {} }}", type_name,
+                                result.expr_name(), type_name, field_names);
+                            handle.ctx.append_stmt(&stmt);
+                            result
+                        }
+                    }
                 }
             }
         }
-
-        m! {
-            impl "accessorTrait" for Vec<$S> {
-                $(
-                    type "outputType" $field = Vec<$T>;
-                )*
-                $(fn $field(&self) -> Self::"outputType" $field {
-                    self.iter()
-                        .map(|s| s.$field())
-                        .collect()
-                })*
-            }
-        }
-
-        m! {
-            impl<'run> "accessorTrait" for DryRunClAtom<'run, $S> {
-                $(type "type" $field = DryRunClScalar<'run, <$S as "traitName">::"outputType" $field>;
-                )*
-                $(fn $field(&self) -> Self::"outputType" $field {
-                    let result = DryRunClScalar::next(self.handle.ctx);
-                    let stmt = format!("{} {} = {}.{}", <$T as ClPrim>::cl_type(), result.handle.expr_name,
-                        self.handle.expr_name, stringify!($field));
-                    self.handle.ctx.append_stmt(&stmt);
-                    result
-                })*
-            }
-        }
-
-        m! {
-            impl<'run> "creatorTrait" for DryRunClAtom<'run, $S> {
-                $(type "type" $field = DryRunS)
-            }
-        }
-    }
-);
-
-impl<T: ClPrim + Mul<Output=T>> ClFuncScalar<T> for T {}
-
-impl<T: ClPrim> ClFuncAtom<T> for T {}
-
-struct DryRunClScalar<'run, T: ClPrim> {
-    _marker: PhantomData<T>,
-    handle: DryRunHandle<'run>,
-}
-
-impl<'run, T: ClPrim> DryRunClScalar<'run, T> {
-    fn next(ctx: &'run DryRunContext) -> DryRunClScalar<'run, T> {
-        let mut tmp = ctx.ident_count.borrow_mut();
-        let ident_count_borrow = tmp.deref_mut();
-        let expr_name = format!("v{}", *ident_count_borrow);
-        *ident_count_borrow += 1;
-        Self::new(ctx, &expr_name)
     }
 }
-
-impl<'run, T: ClPrim> DryRunLValue<'run> for DryRunClScalar<'run, T> {
-    type ClType = T;
-
-    fn new(ctx: &'run DryRunContext, name: &str) -> DryRunClScalar<'run, T> {
-        DryRunClScalar {
-            _marker: PhantomData,
-            handle: DryRunHandle {
-                expr_name: name.to_string(),
-                ctx,
-            },
-        }
-    }
-}
-
-impl<'run, T: ClPrim> DryRun for DryRunClScalar<'run, T> {
-    type ExprType = T;
-
-    fn handle(&self) -> &DryRunHandle {
-        &self.handle
-    }
-}
-
-impl<'run, T: ClPrim> DryRunRValue for DryRunClScalar<'run, T> {
-    fn val(&self) -> String {
-        self.handle.expr_name.clone()
-    }
-}
-
-impl<'run, T> ClFuncScalar<T> for DryRunClScalar<'run, T>
-    where T: ClPrim + DryRunMul {}
-
-impl<'run, T> Mul<DryRunClScalar<'run, T>> for DryRunClScalar<'run, T>
-    where
-        T: ClPrim + DryRunMul {
-    type Output = DryRunClScalar<'run, T>;
-
-    fn mul(self, rhs: DryRunClScalar<'run, T>) -> DryRunClScalar<'run, T> {
-        let result = DryRunClScalar::next(self.handle.ctx);
-        let stmt = format!("{} {} = {}", T::cl_type(), result.handle.expr_name,
-                           T::mul(&self.handle.expr_name, &rhs.handle.expr_name));
-        self.handle.ctx.append_stmt(&stmt);
-        result
-    }
-}
-
 
 #[cfg(test)]
 mod tests {
@@ -290,13 +229,13 @@ mod tests {
 
     #[test]
     fn it_accepts_normal_arguments() {
-        let f3 = kernel(3., 4.);
+        let _f3 = kernel(Actual(3.), Actual(4.));
     }
 
     #[test]
     fn it_writes_its_own_source_code() {
-        let mut ctx: DryRunContext = DryRunContext::new("kernel");
-        let actual = ctx.src(|| kernel::<DryRunClScalar<f32>>(ctx.var("f1"), ctx.var("f2")));
+        let ctx = DryRunContext::new("kernel");
+        let actual = ctx.src(|| kernel(ctx.param("f1"), ctx.param("f2")));
         println!("{}", actual);
         assert_eq!(actual, "__kernel void kernel(\n\tfloat f1,\n\tfloat f2,\n\tfloat* output\n) {
 \tint global_id = get_global_id(0);
@@ -305,7 +244,7 @@ mod tests {
 }");
     }
 
-    fn kernel<F: ClFuncScalar<f32>>(f1: F, f2: F) -> F {
+    fn kernel(f1: Like<f32>, f2: Like<f32>) -> Like<f32> {
         f1 * f2
     }
 
@@ -316,7 +255,7 @@ mod tests {
     }
 
     impl DryRunMul for f32 {
-        fn mul(lhs: &str, rhs: &str) -> String {
+        fn dry_run_mul(lhs: &str, rhs: &str) -> String {
             format!("{} * {}", lhs, rhs)
         }
     }
@@ -339,18 +278,14 @@ mod tests {
 
     #[test]
     fn it_destructures_structs() {
-        fn point_kernel<
-            P: ClFuncAtom<Point> + PointAccessor,
-        >(p1: P) -> P::OutputTypeOf_x {
+        fn point_kernel(p1: Like<Point>) -> Like<f32> {
             p1.x()
         }
 
-        assert_eq!(3.0f32, point_kernel(Point {x: 3.0f32, y: 0.0f32}));
+        assert_eq!(3.0f32, point_kernel(Actual(Point {x: 3.0f32, y: 0.0f32})).unwrap_actual());
 
-        let mut ctx: DryRunContext = DryRunContext::new("point_kernel");
-        let actual: String = ctx.src(|| point_kernel::<
-            DryRunClAtom<Point>,
-        >(ctx.var("f1")));
+        let ctx = DryRunContext::new("point_kernel");
+        let actual: String = ctx.src(|| point_kernel(ctx.param("f1")));
         println!("{}", actual);
         assert!(actual.contains("float v0 = f1.x;
 	output[global_id] = v0;"));
@@ -358,17 +293,13 @@ mod tests {
 
     #[test]
     fn it_returns_structs() {
-        fn point_kernel<
-            P: ClFuncAtom<Point> + PointAccessor,
-        >(p1: P) -> P::OutputTypeOf_x {
-            P::new(p1.x(), p2.x())
+        fn point_kernel(p1: Like<Point>) -> Like<Point> {
+            Point::new(p1.x(), p1.y())
         }
-        let mut ctx: DryRunContext = DryRunContext::new("point_kernel");
-        let actual: String = ctx.src(|| point_kernel::<
-            DryRunClAtom<Point>,
-        >(ctx.var("f1")));
+        let ctx = DryRunContext::new("point_kernel");
+        let actual: String = ctx.src(|| point_kernel(ctx.param("f1")));
         println!("{}", actual);
-        assert!(actual.contains("float v0 = f1.x;
-	output[global_id] = v0;"));
+        assert!(actual.contains("cl_Point v2 = (cl_Point) { v0, v1 };
+	output[global_id] = v2;"));
     }
 }
