@@ -92,7 +92,7 @@ impl DryRunContext {
     fn next_var<T, F>(self: &Rc<Self>, f: F) -> Like<T>
     where
         Like<T>: ClTypeable,
-        F: FnOnce(&Like<T>) -> String,
+        F: FnOnce() -> String,
     {
         let expr_name = {
             let mut tmp = self.ident_count.borrow_mut();
@@ -101,7 +101,8 @@ impl DryRunContext {
             expr_name
         };
         let var = self.new_var(&expr_name, false);
-        let stmt = f(&var);
+        let expr = f();
+        let stmt = format!("{} {} = {}", var.cl_type(), var.expr_name(), expr);
         self.append_stmt(&stmt);
         var
     }
@@ -209,13 +210,8 @@ where
     fn mul(self, rhs: Self) -> Self {
         match self {
             Actual(t) => Actual(t * rhs.unwrap_actual()),
-            DryRun(handle) => handle.ctx.next_var(|result| {
-                format!(
-                    "{} {} = {}",
-                    result.cl_type(),
-                    result.expr_name(),
-                    T::dry_run_mul(&handle.expr_name, &rhs.unwrap_dry_run().expr_name)
-                )
+            DryRun(handle) => handle.ctx.next_var(|| {
+                T::dry_run_mul(&handle.expr_name, &rhs.unwrap_dry_run().expr_name)
             }),
         }
     }
@@ -229,13 +225,8 @@ impl<T: ClPrim> DryRunIndex for Like<Vec<T>> {
             Actual(_) => panic!("Indexing into an actual vector is not allowed"),
             DryRun(handle) => {
                 if handle.metadata.is_param {
-                    handle.ctx.next_var(|result| {
-                        format!(
-                            "{} {} = {}[global_id]",
-                            result.cl_type(),
-                            result.expr_name(),
-                            handle.expr_name
-                        )
+                    handle.ctx.next_var(|| {
+                        format!("{}[global_id]", handle.expr_name)
                     })
                 } else {
                     DryRun(handle.clone())
@@ -259,13 +250,8 @@ where
                     .map(|(a, b)| a * b)
                     .collect(),
             ),
-            DryRun(ref handle) => handle.ctx.next_var(|result| {
-                format!(
-                    "{} {} = {}",
-                    result.cl_type(),
-                    result.expr_name(),
-                    T::dry_run_mul(&self.index().expr_name(), &rhs.index().expr_name())
-                )
+            DryRun(ref handle) => handle.ctx.next_var(|| {
+                T::dry_run_mul(&self.index().expr_name(), &rhs.index().expr_name())
             }),
         }
     }
@@ -275,24 +261,49 @@ macro_rules! atom_accessors {
     ($S:ident, {$($field:ident: $T:ty),+}) => {
         mashup! {
             m["trait"] = $S like;
+            $(
+                m["typeof" $field] = TypeOf_ $field;
+            )*
         }
 
         m! {
             pub trait "trait" {
-                $(fn $field(& self) -> Like<$T>;)+
-
+                $(
+                    type "typeof" $field;
+                )*
+                $(fn $field(& self) -> Like<Self::"typeof" $field>;)+
             }
         }
 
         m! {
             impl "trait" for Like<$S> {
-                $(fn $field(&self) -> Like<$T> {
+                $(
+                    type "typeof" $field = $T;
+                )*
+                $(fn $field(&self) -> Like<<Self as "trait">::"typeof" $field> {
                     match self {
                         Like::Actual(t) => Like::Actual(t.$field),
                         Like::DryRun(handle) => {
-                            handle.ctx.next_var(|result| {
-                                format!("{} {} = {}.{}", result.cl_type(),
-                                    result.expr_name(), handle.expr_name, stringify!($field))
+                            handle.ctx.next_var(|| {
+                                format!("{}.{}", handle.expr_name, stringify!($field))
+                            })
+                        },
+                    }
+                })*
+            }
+        }
+
+        m! {
+            impl "trait" for Like<Vec<$S>> {
+                $(
+                    type "typeof" $field = Vec<$T>;
+                )*
+                $(fn $field(&self) -> Like<<Self as "trait">::"typeof" $field> {
+                    match self {
+                        Like::Actual(t) => Like::Actual(t.iter().map(|f| f.$field).collect()),
+                        Like::DryRun(handle) => {
+                            handle.ctx.next_var(|| {
+                                format!("{}.{}", self.index().expr_name(), stringify!($field))
                             })
                         },
                     }
@@ -312,13 +323,11 @@ macro_rules! atom_accessors {
                             )+
                         }),
                         Like::DryRun(handle) => {
-                            handle.ctx.next_var(|result| {
-                                let type_name = result.cl_type();
+                            handle.ctx.next_var(|| {
                                 let field_names: String = fields.iter()
                                 .map(|f| f.expr_name())
                                 .collect::<Vec<String>>().join(", ");
-                                format!("{} {} = ({}) {{ {} }}", type_name,
-                                    result.expr_name(), type_name, field_names)
+                                format!("({}) {{ {} }}", $S::cl_prim_type(), field_names)
                             })
                         }
                     }
@@ -444,6 +453,37 @@ mod tests {
 	float v2 = b[global_id];
 	float v0 = v1 * v2;
 	output[global_id] = v0;
+}"
+        );
+    }
+
+    #[test]
+    fn it_deals_with_vecs_of_structs() {
+        fn kernel(a: Like<Vec<Point>>, b: Like<Vec<f32>>) -> Like<Vec<f32>> {
+            a.x() * a.y() * b
+        }
+        let actual = kernel(
+            Actual(vec![Point {x: 1., y: 1.,}, Point {x: 2., y: 4.,}, Point {x: 3., y: 9.,}]),
+            Actual(vec![4., 5., 6.]));
+        assert_eq!(actual.unwrap_actual(), vec![4., 40., 162.]);
+
+        let ctx = DryRunContext::new("kernel");
+        let actual: String = ctx.src(|| kernel(ctx.param("a"), ctx.param("b")));
+        println!("{}", actual);
+        assert_eq!(actual, "__kernel void kernel(
+	__global cl_Point* a,
+	__global float* b,
+	__global float* output
+) {
+	int global_id = get_global_id(0);
+	cl_Point v1 = a[global_id];
+	float v0 = v1.x;
+	cl_Point v3 = a[global_id];
+	float v2 = v3.y;
+	float v4 = v0 * v2;
+	float v6 = b[global_id];
+	float v5 = v4 * v6;
+	output[global_id] = v5;
 }"
         );
     }
