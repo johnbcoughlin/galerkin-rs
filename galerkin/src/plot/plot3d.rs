@@ -1,14 +1,15 @@
 extern crate rulinalg;
 extern crate tempfile;
 
-use self::rulinalg::vector::Vector;
-use self::tempfile::tempdir;
 use std::fs::OpenOptions;
 use std::io::Write;
 use std::path::PathBuf;
 use std::process::{Child, Command, Stdio};
 use std::thread;
 use std::time::Duration;
+
+use self::rulinalg::vector::Vector;
+use self::tempfile::tempdir;
 
 pub trait Plotter3D {
     fn create(x_min: f64, x_max: f64, y_min: f64, y_max: f64, z_min: f64, z_max: f64) -> Self;
@@ -35,7 +36,7 @@ impl GnuplotPlotter3D {
         z_min: f64,
         z_max: f64,
     ) {
-        let mut stdin = (&mut self.gnuplot.stdin).as_mut().expect("No stdin");
+        let stdin = (&mut self.gnuplot.stdin).as_mut().expect("No stdin");
         writeln!(stdin, "set xrange [{}:{}]", x_min, x_max).unwrap();
         writeln!(stdin, "set yrange [{}:{}]", y_min, y_max).unwrap();
         writeln!(stdin, "set zrange [{}:{}]", z_min, z_max).unwrap();
@@ -45,7 +46,8 @@ impl GnuplotPlotter3D {
             stdin,
             "splot \"{}\" u 1:2:3 with lines",
             self.path.to_str().unwrap()
-        ).unwrap();
+        )
+        .unwrap();
     }
 }
 

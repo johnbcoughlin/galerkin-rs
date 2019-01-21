@@ -4,30 +4,33 @@ extern crate galerkin;
 extern crate rulinalg;
 extern crate test;
 
-mod flux;
-mod unknowns;
+use std::f64::consts;
+use std::iter::repeat_with;
 
-use flux::*;
+use rulinalg::vector::Vector;
+
 use galerkin::blas::*;
 use galerkin::distmesh::distmesh_2d::unit_square;
 use galerkin::functions::range_kutta::RKA;
 use galerkin::functions::range_kutta::RKB;
 use galerkin::galerkin_2d::flux::compute_flux;
 use galerkin::galerkin_2d::galerkin::GalerkinScheme;
+use galerkin::galerkin_2d::grid::{assemble_grid, Grid};
 use galerkin::galerkin_2d::grid::Element;
 use galerkin::galerkin_2d::grid::ElementStorage;
-use galerkin::galerkin_2d::grid::{assemble_grid, Grid};
-use galerkin::galerkin_2d::operators::curl_2d;
-use galerkin::galerkin_2d::operators::grad;
-use galerkin::galerkin_2d::operators::FaceLiftable;
 use galerkin::galerkin_2d::operators::{assemble_operators, Operators};
+use galerkin::galerkin_2d::operators::curl_2d;
+use galerkin::galerkin_2d::operators::FaceLiftable;
+use galerkin::galerkin_2d::operators::grad;
 use galerkin::galerkin_2d::reference_element::ReferenceElement;
 use galerkin::galerkin_2d::unknowns::{communicate, initialize_storage, Unknown};
 use galerkin::plot::plot3d::{GnuplotPlotter3D, Plotter3D};
-use rulinalg::vector::Vector;
-use std::f64::consts;
-use std::iter::repeat_with;
-use unknowns::*;
+
+use crate::flux::*;
+use crate::unknowns::*;
+
+mod flux;
+mod unknowns;
 
 fn main() {
     maxwell_2d_example(true, 10.0);
@@ -155,7 +158,8 @@ pub fn maxwell_2d_example(plot: bool, final_time: f64) {
     let reference_element = ReferenceElement::legendre(n_p);
     let operators = assemble_operators(&reference_element);
     let mesh = unit_square();
-    let boundary_condition = |_t: f64, _x: &Vector<f64>, _y: &Vector<f64>| EH::face1_zero(&reference_element);
+    let boundary_condition =
+        |_t: f64, _x: &Vector<f64>, _y: &Vector<f64>| EH::face1_zero(&reference_element);
     let grid: Grid<Maxwell2D> = assemble_grid(
         &reference_element,
         &operators,
@@ -206,8 +210,9 @@ fn exact_cavity_solution_eh0(xs: &Vector<f64>, ys: &Vector<f64>) -> EH {
 mod tests {
     extern crate test;
 
-    use super::*;
     use test::Bencher;
+
+    use super::*;
 
     #[bench]
     pub fn bench(b: &mut Bencher) {
@@ -215,7 +220,8 @@ mod tests {
         let reference_element = ReferenceElement::legendre(n_p);
         let operators = assemble_operators(&reference_element);
         let mesh = unit_square();
-        let boundary_condition = |_t: f64, _x: &Vector<f64>, _y: &Vector<f64>| EH::face1_zero(&reference_element);
+        let boundary_condition =
+            |_t: f64, _x: &Vector<f64>, _y: &Vector<f64>| EH::face1_zero(&reference_element);
         let grid: Grid<Maxwell2D> = assemble_grid(
             &reference_element,
             &operators,

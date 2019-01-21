@@ -1,17 +1,19 @@
-extern crate rulinalg;
-extern crate rtriangulate;
 extern crate itertools;
+extern crate rtriangulate;
+extern crate rulinalg;
 
-use self::rulinalg::matrix::{BaseMatrix, Matrix};
-use self::rulinalg::vector::Vector;
-use self::itertools::Itertools;
 use std::cmp::Ordering::*;
-use functions::jacobi_polynomials;
-use functions::vandermonde;
-use galerkin_2d::grid::FaceNumber;
 use std::f64::consts::PI;
 use std::iter::FromIterator;
-use distmesh::mesh::{Mesh, Point2D, Triangle};
+
+use crate::distmesh::mesh::{Mesh, Point2D, Triangle};
+use crate::functions::jacobi_polynomials;
+use crate::functions::vandermonde;
+use crate::galerkin_2d::grid::FaceNumber;
+
+use self::itertools::Itertools;
+use self::rulinalg::matrix::{BaseMatrix, Matrix};
+use self::rulinalg::vector::Vector;
 
 const ALPHAS: [f64; 15] = [
     0.0000, 0.0000, 1.4152, 0.1001, 0.2751, 0.9800, 1.0999, 1.2832, 1.3648, 1.4773, 1.4959, 1.5743,
@@ -172,24 +174,35 @@ impl ReferenceElement {
      * Produces a triangulation mesh from this reference element.
      */
     pub fn to_mesh(&self) -> Mesh {
-        let mut points: Vec<(usize, rtriangulate::TriangulationPoint<f64>)> =
-            self.rs.iter().zip(self.ss.iter())
-                .map(|(&r, &s)| rtriangulate::TriangulationPoint { x: r, y: s })
-                .enumerate()
-                .collect();
+        let mut points: Vec<(usize, rtriangulate::TriangulationPoint<f64>)> = self
+            .rs
+            .iter()
+            .zip(self.ss.iter())
+            .map(|(&r, &s)| rtriangulate::TriangulationPoint { x: r, y: s })
+            .enumerate()
+            .collect();
         points.sort_unstable_by(|(_, p1), (_, p2)| rtriangulate::sort_points(p1, p2));
-        let triangles = rtriangulate::triangulate(&points.iter()
-            .map(|&(_, point)| point).collect::<Vec<rtriangulate::TriangulationPoint<f64>>>()).unwrap();
+        let triangles = rtriangulate::triangulate(
+            &points
+                .iter()
+                .map(|&(_, point)| point)
+                .collect::<Vec<rtriangulate::TriangulationPoint<f64>>>(),
+        )
+        .unwrap();
 
         Mesh {
-            points: points.iter().map(|&(_, p)| Point2D { x: p.x, y: p.y }).collect(),
-            triangles: triangles.into_iter().map(|tri| {
-                Triangle {
+            points: points
+                .iter()
+                .map(|&(_, p)| Point2D { x: p.x, y: p.y })
+                .collect(),
+            triangles: triangles
+                .into_iter()
+                .map(|tri| Triangle {
                     a: points[tri.0].0 as i32,
                     b: points[tri.1].0 as i32,
-                    c: points[tri.2].0 as i32
-                }
-            }).collect(),
+                    c: points[tri.2].0 as i32,
+                })
+                .collect(),
         }
     }
 }
@@ -235,8 +248,8 @@ fn warp_factor(n_p: i32, gammas: Vector<f64>) -> Vector<f64> {
 mod tests {
     extern crate rulinalg;
 
-    use super::warp_factor;
     use super::ReferenceElement;
+    use super::warp_factor;
 
     #[test]
     fn test_warp_factor() {

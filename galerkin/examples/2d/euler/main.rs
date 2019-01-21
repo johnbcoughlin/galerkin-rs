@@ -4,24 +4,29 @@ extern crate galerkin;
 #[macro_use]
 extern crate rulinalg;
 
-use flux::*;
+use std::f64::consts;
+use std::iter::repeat_with;
+use std::sync::mpsc::Sender;
+
+use rulinalg::vector::Vector;
+
+use galerkin::distmesh::distmesh_2d;
+use galerkin::functions::range_kutta::*;
 use galerkin::galerkin_2d::flux::compute_flux;
 use galerkin::galerkin_2d::galerkin::GalerkinScheme;
 use galerkin::galerkin_2d::grid::{assemble_grid, Element, ElementStorage, Grid};
-use galerkin::galerkin_2d::operators::{assemble_operators, cutoff_filter, FaceLiftable, Operators};
-use galerkin::galerkin_2d::reference_element::ReferenceElement;
-use galerkin::distmesh::distmesh_2d;
-use galerkin::galerkin_2d::unknowns::Unknown;
-use rulinalg::vector::Vector;
-use unknowns::*;
-use std::f64::consts;
 use galerkin::galerkin_2d::grid::FaceNumber;
-use galerkin::galerkin_2d::unknowns::initialize_storage;
-use std::iter::repeat_with;
+use galerkin::galerkin_2d::operators::{
+    assemble_operators, cutoff_filter, FaceLiftable, Operators,
+};
+use galerkin::galerkin_2d::reference_element::ReferenceElement;
 use galerkin::galerkin_2d::unknowns::communicate;
-use galerkin::functions::range_kutta::*;
+use galerkin::galerkin_2d::unknowns::initialize_storage;
+use galerkin::galerkin_2d::unknowns::Unknown;
 use galerkin::plot::glium::run_inside_plot;
-use std::sync::mpsc::Sender;
+
+use crate::flux::*;
+use crate::unknowns::*;
 
 mod flux;
 mod unknowns;
@@ -70,11 +75,8 @@ fn euler_2d<'grid, Fx>(
 ) where
     Fx: Fn(f64, &Vector<f64>, &Vector<f64>) -> Q,
 {
-    let mut storage: Vec<ElementStorage<Euler2D>> = initialize_storage(
-        |x, y| exact_solution(0., x, y),
-        reference_element,
-        grid,
-    );
+    let mut storage: Vec<ElementStorage<Euler2D>> =
+        initialize_storage(|x, y| exact_solution(0., x, y), reference_element, grid);
     let mut residuals: Vec<Q> = repeat_with(|| Q::zero(reference_element))
         .take(grid.elements.len())
         .collect();
@@ -87,11 +89,7 @@ fn euler_2d<'grid, Fx>(
 
     let mut t: f64 = 0.0;
 
-    let mut dt = timestep(
-        grid,
-        &storage,
-        reference_element,
-    );
+    let mut dt = timestep(grid, &storage, reference_element);
 
     while t < final_time {
         for int_rk in 0..5 {
@@ -104,7 +102,8 @@ fn euler_2d<'grid, Fx>(
                     let residuals_q = &(residuals[elt.index as usize]);
                     let rhs = euler_rhs_2d(&elt, &storage, &operators);
                     residuals_q * RKA[int_rk] + rhs * dt
-                }.matrix_multiply(&filter);
+                }
+                .matrix_multiply(&filter);
 
                 let q = {
                     let q: &Q = &storage.u_k;
@@ -117,17 +116,17 @@ fn euler_2d<'grid, Fx>(
         }
         println!("time: {}", t);
         t = t + dt;
-        dt = timestep(
-            grid,
-            &storage,
-            reference_element,
-        );
+        dt = timestep(grid, &storage, reference_element);
         {
-            let rho_u = (*grid).elements.iter()
+            let rho_u = (*grid)
+                .elements
+                .iter()
                 .flat_map(|ref elt| storage[elt.index as usize].u_k.rho_u.iter())
                 .map(|&e| e)
                 .collect();
-            sender.send(rho_u).expect("could not send to plotting thread");
+            sender
+                .send(rho_u)
+                .expect("could not send to plotting thread");
         }
     }
 }
@@ -172,10 +171,12 @@ fn timestep(
         let face_max = |face_num: FaceNumber| {
             let q: Q = q.face(face_num, reference_element);
             let (_, _, uvp) = q.to_FG_UVP();
-            let c: Vector<f64> = ((uvp.p.elediv(&q.rho)) * Q::GAMMA).into_iter()
+            let c: Vector<f64> = ((uvp.p.elediv(&q.rho)) * Q::GAMMA)
+                .into_iter()
                 .map(|x| x.abs().sqrt())
                 .collect();
-            let uv_norm: Vector<f64> = (uvp.u.elemul(&uvp.u) + uvp.v.elemul(&uvp.v)).into_iter()
+            let uv_norm: Vector<f64> = (uvp.u.elemul(&uvp.u) + uvp.v.elemul(&uvp.v))
+                .into_iter()
                 .map(&f64::sqrt)
                 .collect();
             let n = reference_element.n as f64;
@@ -183,9 +184,9 @@ fn timestep(
             (term.elemul(&(uv_norm + c))).argmax().1
         };
         dt_max_recip = dt_max_recip.max(
-            face_max(FaceNumber::One).max(
-                face_max(FaceNumber::Two).max(
-                    face_max(FaceNumber::Three))));
+            face_max(FaceNumber::One)
+                .max(face_max(FaceNumber::Two).max(face_max(FaceNumber::Three))),
+        );
     }
     1. / dt_max_recip
 }
@@ -203,9 +204,9 @@ fn isentropic_vortex(t: f64, x: &Vector<f64>, y: &Vector<f64>) -> Q {
 
     let u = -(y - y_0).elemul(&beta_exp) / (2. * consts::PI) + 1.;
     let v = (x - t - x_0).elemul(&beta_exp) / (2. * consts::PI);
-    let rho = (-beta_exp.elemul(&beta_exp) * (gamma - 1.) /
-        (16. * gamma * consts::PI * consts::PI) + 1.)
-        .apply(&|x| x.powf(1. / (gamma - 1.)));
+    let rho =
+        (-beta_exp.elemul(&beta_exp) * (gamma - 1.) / (16. * gamma * consts::PI * consts::PI) + 1.)
+            .apply(&|x| x.powf(1. / (gamma - 1.)));
     let rho2 = rho.clone();
     let p = rho.apply(&|x| x.powf(gamma));
 
@@ -228,8 +229,9 @@ impl GalerkinScheme for Euler2D {
 mod tests {
     extern crate rulinalg;
 
-    use super::*;
     use rulinalg::vector::Vector;
+
+    use super::*;
 
     #[test]
     fn test_isentropic_vortex_t0() {

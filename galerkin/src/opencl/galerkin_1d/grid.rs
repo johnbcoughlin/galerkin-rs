@@ -1,12 +1,14 @@
 extern crate rulinalg;
 
-use opencl::galerkin_1d::galerkin::GalerkinScheme;
-use rulinalg::vector::Vector;
-use opencl::galerkin_1d::unknowns::Unknown;
 use std::clone::Clone;
-use galerkin_1d::grid::ReferenceElement;
-use galerkin_1d::operators::Operators;
+
 use ocl::Buffer;
+use rulinalg::vector::Vector;
+
+use crate::galerkin_1d::grid::ReferenceElement;
+use crate::galerkin_1d::operators::Operators;
+use crate::opencl::galerkin_1d::galerkin::GalerkinScheme;
+use crate::opencl::galerkin_1d::unknowns::Unknown;
 
 pub trait SpatialFlux {
     type Unit: Sized + Copy;
@@ -98,9 +100,9 @@ pub fn generate_grid<GS, Fx>(
     right_boundary: Face<GS>,
     f: Fx,
 ) -> Grid<GS>
-    where
-        GS: GalerkinScheme,
-        Fx: Fn(&Vector<f64>) -> GS::F,
+where
+    GS: GalerkinScheme,
+    Fx: Fn(&Vector<f64>) -> GS::F,
 {
     let x_ks = compute_x_k(x_min, x_max, n_k, reference_element);
     let n_k = n_k as usize;
@@ -115,7 +117,7 @@ pub fn generate_grid<GS, Fx>(
     let spatial_flux = f(&x_k);
 
     let f_left_plus = match left_boundary.face_type {
-        FaceType::Interior(i) => spatial_flux.first(),
+        FaceType::Interior(_i) => spatial_flux.first(),
         FaceType::Boundary(_, f) => f.clone(),
     };
 
@@ -156,8 +158,12 @@ pub fn generate_grid<GS, Fx>(
             r_x,
             r_x_left,
             r_x_right,
-            left_face: Face { face_type: FaceType::Interior(i - 1) },
-            right_face: Face { face_type: FaceType::Interior(i + 1) },
+            left_face: Face {
+                face_type: FaceType::Interior(i - 1),
+            },
+            right_face: Face {
+                face_type: FaceType::Interior(i + 1),
+            },
             left_outward_normal: -1.,
             right_outward_normal: 1.,
             f_left_minus: <GS::F as SpatialFlux>::first(&spatial_flux),
@@ -175,7 +181,7 @@ pub fn generate_grid<GS, Fx>(
     let r_x_right = r_x[reference_element.n_p as usize];
     let spatial_flux = f(&x_k);
     let f_right_plus = match right_boundary.face_type {
-        FaceType::Interior(i) => spatial_flux.first(),
+        FaceType::Interior(_i) => spatial_flux.first(),
         FaceType::Boundary(_, f) => f.clone(),
     };
 
@@ -187,7 +193,9 @@ pub fn generate_grid<GS, Fx>(
         r_x,
         r_x_left,
         r_x_right,
-        left_face: Face { face_type: FaceType::Interior(n_k - 1) },
+        left_face: Face {
+            face_type: FaceType::Interior(n_k - 1),
+        },
         right_face: right_boundary,
         left_outward_normal: -1.,
         right_outward_normal: 1.,
@@ -204,14 +212,19 @@ pub fn generate_grid<GS, Fx>(
     }
 }
 
-fn compute_x_k(x_min: f64, x_max: f64, n_k: i32, reference_element: &ReferenceElement) -> Vec<Vector<f64>> {
+fn compute_x_k(
+    x_min: f64,
+    x_max: f64,
+    n_k: i32,
+    reference_element: &ReferenceElement,
+) -> Vec<Vector<f64>> {
     assert!(x_max > x_min);
     let diff = (x_max - x_min) / (n_k as f64);
     let transform = |left| {
         let s = (&reference_element.rs + 1.) / 2.;
         s * diff + left
     };
-    (0..n_k).map(|i| {
-        transform(x_min + diff * i as f64)
-    }).collect::<Vec<Vector<f64>>>()
+    (0..n_k)
+        .map(|i| transform(x_min + diff * i as f64))
+        .collect::<Vec<Vector<f64>>>()
 }

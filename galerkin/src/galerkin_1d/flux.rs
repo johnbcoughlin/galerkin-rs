@@ -1,5 +1,5 @@
-use galerkin_1d::grid::SpatialFlux;
-use galerkin_1d::unknowns::Unknown;
+use crate::galerkin_1d::grid::SpatialFlux;
+use crate::galerkin_1d::unknowns::Unknown;
 
 pub struct Side<U: Unknown, F: SpatialFlux> {
     pub u: U::Unit,

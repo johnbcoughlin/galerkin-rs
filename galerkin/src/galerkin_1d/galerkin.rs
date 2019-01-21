@@ -1,13 +1,13 @@
 extern crate rulinalg;
 
-use galerkin_1d::flux::FluxEnum;
-use galerkin_1d::flux::FluxScheme;
-use galerkin_1d::flux::NumericalFlux;
-use galerkin_1d::flux::Side;
-use galerkin_1d::grid::Element;
-use galerkin_1d::grid::ElementStorage;
-use galerkin_1d::grid::SpatialFlux;
-use galerkin_1d::unknowns::Unknown;
+use crate::galerkin_1d::flux::FluxEnum;
+use crate::galerkin_1d::flux::FluxScheme;
+use crate::galerkin_1d::flux::NumericalFlux;
+use crate::galerkin_1d::flux::Side;
+use crate::galerkin_1d::grid::Element;
+use crate::galerkin_1d::grid::ElementStorage;
+use crate::galerkin_1d::grid::SpatialFlux;
+use crate::galerkin_1d::unknowns::Unknown;
 
 pub trait GalerkinScheme {
     type U: Unknown;

@@ -1,29 +1,31 @@
-extern crate ocl;
-extern crate rulinalg;
 #[macro_use]
 extern crate galerkin;
+extern crate ocl;
+extern crate rulinalg;
 
 use std::f64::consts;
-use galerkin::opencl::galerkin_1d::galerkin::GalerkinScheme;
-use galerkin::opencl::galerkin_1d::grid::ElementStorage;
-use ocl::{ProQue, Program, Buffer, Context};
-use galerkin::opencl::galerkin_1d::unknowns::{Unknown};
+use std::fmt::Debug;
 use std::iter::repeat;
-use galerkin::opencl::galerkin_1d::galerkin::prepare_communication_kernels;
-use galerkin::opencl::galerkin_1d::unknowns::initialize_residuals;
-use galerkin::opencl::galerkin_1d::galerkin::communicate;
+
+use ocl::{Buffer, Context, Program, ProQue};
+use rulinalg::vector::Vector;
+
 use galerkin::functions::range_kutta::*;
+use galerkin::galerkin_1d::grid::ReferenceElement;
+use galerkin::galerkin_1d::operators::{assemble_operators, Operators};
+use galerkin::opencl::galerkin_1d::galerkin::communicate;
+use galerkin::opencl::galerkin_1d::galerkin::GalerkinScheme;
+use galerkin::opencl::galerkin_1d::galerkin::initialize_storage;
+use galerkin::opencl::galerkin_1d::galerkin::prepare_communication_kernels;
+use galerkin::opencl::galerkin_1d::grid::{Face, FaceType, generate_grid, Grid};
+use galerkin::opencl::galerkin_1d::grid::BoundaryCondition;
 use galerkin::opencl::galerkin_1d::grid::Element;
+use galerkin::opencl::galerkin_1d::grid::ElementStorage;
+use galerkin::opencl::galerkin_1d::grid::SpatialFlux;
 use galerkin::opencl::galerkin_1d::operators::OperatorsStorage;
 use galerkin::opencl::galerkin_1d::operators::store_operators;
-use galerkin::opencl::galerkin_1d::grid::SpatialFlux;
-use galerkin::galerkin_1d::grid::ReferenceElement;
-use galerkin::galerkin_1d::operators::{Operators, assemble_operators};
-use galerkin::opencl::galerkin_1d::grid::{Grid, generate_grid, Face, FaceType};
-use galerkin::opencl::galerkin_1d::galerkin::initialize_storage;
-use galerkin::opencl::galerkin_1d::grid::BoundaryCondition;
-use rulinalg::vector::Vector;
-use std::fmt::Debug;
+use galerkin::opencl::galerkin_1d::unknowns::initialize_residuals;
+use galerkin::opencl::galerkin_1d::unknowns::Unknown;
 
 pub struct F(f32);
 
@@ -57,11 +59,10 @@ pub fn advec_1d<Fx, Fu>(
     operators: &Operators,
     grid: &Grid<Scheme>,
     u_0: Fx,
-    mut solution_callback: Fu
-)
-where
-Fx: Fn(&Vector<f64>) -> Vec<U>,
-Fu: FnMut(&Vec<U>)
+    _solution_callback: Fu,
+) where
+    Fx: Fn(&Vector<f64>) -> Vec<U>,
+    Fu: FnMut(&Vec<U>),
 {
     let final_time = 1.3;
 
@@ -75,7 +76,9 @@ Fu: FnMut(&Vec<U>)
 
     let a = 1.0;
 
-    let context = Context::builder().build().expect("could not create OpenCL context");
+    let _context = Context::builder()
+        .build()
+        .expect("could not create OpenCL context");
     let mut program_builder = Program::builder();
     program_builder
         .src(U::cl_struct_def())
@@ -86,16 +89,15 @@ Fu: FnMut(&Vec<U>)
         .src(ADVEC_FLUX_KERNEL)
         .src(ADVEC_RHS_KERNEL);
     let communication_kernels = prepare_communication_kernels(
-        &U::cl_struct_type(), &vec![
-            String::from("freeflow_bc"),
-            String::from("sin_bc"),
-        ]
+        &U::cl_struct_type(),
+        &vec![String::from("freeflow_bc"), String::from("sin_bc")],
     );
     program_builder.src(communication_kernels);
     let pro_que: ProQue = ProQue::builder()
         .prog_bldr(program_builder)
         .dims(reference_element.n_p)
-        .build().expect("could not build ProQue");
+        .build()
+        .expect("could not build ProQue");
 
     let mut storage: Vec<ElementStorage<U>> =
         initialize_storage(u_0, reference_element.n_p, grid, operators, &pro_que);
@@ -108,17 +110,32 @@ Fu: FnMut(&Vec<U>)
             let t = t + RKC[int_rk] * dt;
 
             for elt in &grid.elements {
-                communicate(t, reference_element, elt, &grid.elements,
-                    &storage[elt.index as usize], &storage, &pro_que);
+                communicate(
+                    t,
+                    reference_element,
+                    elt,
+                    &grid.elements,
+                    &storage[elt.index as usize],
+                    &storage,
+                    &pro_que,
+                );
             }
 
             for elt in (*grid).elements.iter() {
                 let mut storage = &mut storage[elt.index as usize];
                 let residuals_u = &(residuals[elt.index as usize]);
 
-                apply_rhs_to_residual(int_rk, elt, storage, residuals_u, &operator_storage,
-                    reference_element, &pro_que, dt, a);
-
+                apply_rhs_to_residual(
+                    int_rk,
+                    elt,
+                    storage,
+                    residuals_u,
+                    &operator_storage,
+                    reference_element,
+                    &pro_que,
+                    dt,
+                    a,
+                );
             }
             &pro_que.finish().unwrap();
         }
@@ -128,7 +145,7 @@ Fu: FnMut(&Vec<U>)
             storage.u_k.read(&mut slice).enq().unwrap();
             u.extend_from_slice(slice.as_slice());
         }
-//        solution_callback(&u);
+        //        solution_callback(&u);
     }
 }
 
@@ -147,19 +164,23 @@ fn apply_rhs_to_residual(
 
     debug_buffer(rhs);
 
-    let augment_residual = pro_que.kernel_builder("augment_residual")
+    let augment_residual = pro_que
+        .kernel_builder("augment_residual")
         .arg_named("residual", residual_u)
         .arg_named("rhs_u", rhs)
         .arg_named("rka", RKA[int_rk])
         .arg_named("dt", dt)
         .global_work_size(reference_element.n_p)
-        .build().unwrap();
-    let apply_residual = pro_que.kernel_builder("apply_residual")
+        .build()
+        .unwrap();
+    let apply_residual = pro_que
+        .kernel_builder("apply_residual")
         .arg_named("residual", residual_u)
         .arg_named("u", &elt_storage.u_k)
         .arg_named("rkb", RKB[int_rk])
         .global_work_size(reference_element.n_p)
-        .build().unwrap();
+        .build()
+        .unwrap();
 
     unsafe {
         augment_residual.enq().expect("kernel error");
@@ -167,14 +188,16 @@ fn apply_rhs_to_residual(
     }
 }
 
-fn rhs<'a>(reference_element: &ReferenceElement,
-       elt: &Element<Scheme>,
-       elt_storage: &'a ElementStorage<U>,
-       operators: &OperatorsStorage,
-       pro_que: &ProQue,
-       a: f64,
+fn rhs<'a>(
+    reference_element: &ReferenceElement,
+    elt: &Element<Scheme>,
+    elt_storage: &'a ElementStorage<U>,
+    operators: &OperatorsStorage,
+    pro_que: &ProQue,
+    a: f64,
 ) -> &'a Buffer<U> {
-    let left_flux_kernel = pro_que.kernel_builder("advec_flux")
+    let left_flux_kernel = pro_que
+        .kernel_builder("advec_flux")
         .arg_named("u_minus", &elt_storage.u_left_minus)
         .arg_named("u_plus", &elt_storage.u_left_plus)
         .arg_named("f_minus", &elt.f_left_minus)
@@ -182,8 +205,10 @@ fn rhs<'a>(reference_element: &ReferenceElement,
         .arg_named("outward_normal", elt.left_outward_normal as f32)
         .arg_named("output", &elt_storage.du_left)
         .global_work_size(1)
-        .build().unwrap();
-    let right_flux_kernel = pro_que.kernel_builder("advec_flux")
+        .build()
+        .unwrap();
+    let right_flux_kernel = pro_que
+        .kernel_builder("advec_flux")
         .arg_named("u_minus", &elt_storage.u_right_minus)
         .arg_named("u_plus", &elt_storage.u_right_plus)
         .arg_named("f_minus", &elt.f_right_minus)
@@ -191,13 +216,15 @@ fn rhs<'a>(reference_element: &ReferenceElement,
         .arg_named("outward_normal", elt.right_outward_normal as f32)
         .arg_named("output", &elt_storage.du_right)
         .global_work_size(1)
-        .build().unwrap();
+        .build()
+        .unwrap();
     unsafe {
         left_flux_kernel.enq().expect("kernel error");
         right_flux_kernel.enq().expect("kernel error");
     }
 
-    let rhs_kernel = pro_que.kernel_builder("advec_rhs")
+    let rhs_kernel = pro_que
+        .kernel_builder("advec_rhs")
         .arg_named("n_p", reference_element.n_p + 1)
         .arg_named("n_f", 1)
         .arg_named("u", &elt_storage.u_k)
@@ -211,7 +238,8 @@ fn rhs<'a>(reference_element: &ReferenceElement,
         .arg_named("a", a as f32)
         .arg_named("output", &elt_storage.u_k_rhs)
         .global_work_size(reference_element.n_p + 1)
-        .build().unwrap();
+        .build()
+        .unwrap();
     unsafe {
         rhs_kernel.enq().expect("kernel error");
     }
@@ -323,28 +351,34 @@ pub fn main() {
     let operators = assemble_operators(&reference_element);
     let left_boundary = Face {
         face_type: FaceType::Boundary(
-            BoundaryCondition { function_name: "sin_bc".to_string() },
+            BoundaryCondition {
+                function_name: "sin_bc".to_string(),
+            },
             1.,
         ),
     };
     let right_boundary = Face {
         face_type: FaceType::Boundary(
-            BoundaryCondition { function_name: "freeflow_bc".to_string() },
+            BoundaryCondition {
+                function_name: "freeflow_bc".to_string(),
+            },
             1.,
         ),
     };
     let grid = generate_grid(
-        -1.0, 1.0, 8, &reference_element, &operators, left_boundary, right_boundary,
+        -1.0,
+        1.0,
+        8,
+        &reference_element,
+        &operators,
+        left_boundary,
+        right_boundary,
         move |_| F(1.),
     );
 
-    advec_1d(
-        &reference_element,
-        &operators,
-        &grid,
-        &u_0,
-        |u| println!("{:?}", u),
-    );
+    advec_1d(&reference_element, &operators, &grid, &u_0, |u| {
+        println!("{:?}", u)
+    });
 }
 
 fn u_0(xs: &Vector<f64>) -> Vec<U> {

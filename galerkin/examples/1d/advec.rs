@@ -2,16 +2,18 @@ extern crate galerkin;
 #[macro_use]
 extern crate rulinalg;
 
-use self::rulinalg::vector::Vector;
+use std::f64::consts;
+use std::iter::repeat;
+
 use galerkin::functions::range_kutta::{RKA, RKB, RKC};
 use galerkin::galerkin_1d::flux::{FluxEnum, FluxScheme, FreeflowFlux, LaxFriedrichs};
 use galerkin::galerkin_1d::galerkin::{compute_flux, Formulation, GalerkinScheme};
-use galerkin::galerkin_1d::grid::{self, generate_grid, FaceType, ReferenceElement};
+use galerkin::galerkin_1d::grid::{self, FaceType, generate_grid, ReferenceElement};
 use galerkin::galerkin_1d::operators::{assemble_operators, Operators};
 use galerkin::galerkin_1d::unknowns::{communicate, initialize_storage, Unknown};
 use galerkin::plot::plot2d::Plotter2D;
-use std::f64::consts;
-use std::iter::repeat;
+
+use self::rulinalg::vector::Vector;
 
 fn main() {
     advec_1d_example();
