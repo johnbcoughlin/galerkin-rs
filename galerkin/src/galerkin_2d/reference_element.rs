@@ -11,9 +11,7 @@ use functions::vandermonde;
 use galerkin_2d::grid::FaceNumber;
 use std::f64::consts::PI;
 use std::iter::FromIterator;
-use distmesh::mesh::{Mesh, Point2D, Triangle, ExpandedTriangle};
-use std::collections::VecDeque;
-use std::collections::HashSet;
+use distmesh::mesh::{Mesh, Point2D, Triangle};
 
 const ALPHAS: [f64; 15] = [
     0.0000, 0.0000, 1.4152, 0.1001, 0.2751, 0.9800, 1.0999, 1.2832, 1.3648, 1.4773, 1.4959, 1.5743,

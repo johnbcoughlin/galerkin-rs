@@ -81,7 +81,7 @@ pub fn grad_vandermonde_2d(n: i32, a: &Vector<f64>, b: &Vector<f64>) -> (Matrix<
 #[cfg(test)]
 mod tests {
     use functions::jacobi_polynomials::grad_legendre_roots;
-    use functions::vandermonde::{grad_vandermonde, vandermonde, vandermonde_2d};
+    use functions::vandermonde::{grad_vandermonde, vandermonde, grad_vandermonde_2d, vandermonde_2d};
     use std::ops::Index;
 
     #[test]
@@ -121,7 +121,31 @@ mod tests {
             1.
         ];
         let v = vandermonde_2d(5, &a, &b);
+        println!("{}", v);
         assert_eq!(*v.index([1, 2]), 0.24276745596088087);
         assert_eq!(*v.index([4, 11]), 11.132172517758661);
+    }
+
+    #[test]
+    fn test_grad_vandermonde_2d() {
+        let a = vector![
+            -1.,
+            -0.733782082764989,
+            0.112279732256502,
+            2.59621764561432,
+            14.0252847048942,
+            -1.
+        ];
+        let b = vector![
+            -1.,
+            -0.765055323929465,
+            -0.285231516480645,
+            0.285231516480645,
+            0.765055323929465,
+            1.
+        ];
+        let v = grad_vandermonde_2d(5, &a, &b);
+        assert_eq!(*v.0.index([2, 7]), 1.6693119690025644);
+        assert_eq!(*v.1.index([4, 11]), 6.928993374081644);
     }
 }

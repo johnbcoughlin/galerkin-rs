@@ -20,7 +20,6 @@ use galerkin::galerkin_2d::unknowns::initialize_storage;
 use std::iter::repeat_with;
 use galerkin::galerkin_2d::unknowns::communicate;
 use galerkin::functions::range_kutta::*;
-use galerkin::plot::plot3d::{Plotter3D, GnuplotPlotter3D};
 use galerkin::plot::glium::run_inside_plot;
 use std::sync::mpsc::Sender;
 
@@ -56,7 +55,6 @@ pub fn euler_2d_example() {
             &operators,
             &isentropic_vortex,
             1.,
-            false,
             sender,
         );
     });
@@ -68,7 +66,6 @@ fn euler_2d<'grid, Fx>(
     operators: &Operators,
     exact_solution: Fx,
     final_time: f64,
-    plot: bool,
     sender: Sender<Vec<f64>>,
 ) where
     Fx: Fn(f64, &Vector<f64>, &Vector<f64>) -> Q,
@@ -96,8 +93,7 @@ fn euler_2d<'grid, Fx>(
         reference_element,
     );
 
-    let mut epoch = 0;
-    while epoch < 100 {
+    while t < final_time {
         for int_rk in 0..5 {
             communicate(t, reference_element, grid, &mut storage);
 
@@ -126,15 +122,13 @@ fn euler_2d<'grid, Fx>(
             &storage,
             reference_element,
         );
-        // plot
         {
             let rho_u = (*grid).elements.iter()
                 .flat_map(|ref elt| storage[elt.index as usize].u_k.rho_u.iter())
                 .map(|&e| e)
                 .collect();
-            sender.send(rho_u);
+            sender.send(rho_u).expect("could not send to plotting thread");
         }
-        epoch += 1;
     }
 }
 
@@ -144,7 +138,7 @@ fn euler_rhs_2d<'grid>(
     operators: &Operators,
 ) -> Q {
     let volume_term = {
-        let (f, g, uvp) = elt_storage.u_k.to_FG_UVP();
+        let (f, g, _uvp) = elt_storage.u_k.to_FG_UVP();
         let df_dr = f.matrix_multiply(&operators.d_r_w);
         let df_ds = f.matrix_multiply(&operators.d_s_w);
         let dg_dr = g.matrix_multiply(&operators.d_r_w);
@@ -202,8 +196,8 @@ fn isentropic_vortex(t: f64, x: &Vector<f64>, y: &Vector<f64>) -> Q {
     let beta: f64 = 5.;
     let gamma: f64 = Q::GAMMA;
 
-    let xt = (x - t - x_0);
-    let yt = (y - y_0);
+    let xt = x - t - x_0;
+    let yt = y - y_0;
     let r: Vector<f64> = (xt.elemul(&xt) + yt.elemul(&yt)).apply(&f64::sqrt);
     let beta_exp = r.apply(&|r: f64| f64::exp(1. - r * r)) * beta;
 

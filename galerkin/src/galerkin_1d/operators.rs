@@ -2,7 +2,6 @@ extern crate rulinalg;
 
 use functions::vandermonde::{grad_vandermonde, vandermonde};
 use galerkin_1d::grid::ReferenceElement;
-use galerkin_1d::unknowns::Unknown;
 use rulinalg::matrix::{BaseMatrix, Matrix};
 
 pub struct Operators {
@@ -17,10 +16,7 @@ pub struct Operators {
     pub lift: Matrix<f64>,
 }
 
-pub fn assemble_operators<U>(reference_element: &ReferenceElement) -> Operators
-where
-    U: Unknown,
-{
+pub fn assemble_operators(reference_element: &ReferenceElement) -> Operators {
     let n_p = reference_element.n_p;
     let rs = &reference_element.rs;
 

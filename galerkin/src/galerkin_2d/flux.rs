@@ -2,7 +2,6 @@ use galerkin_2d::galerkin::GalerkinScheme;
 use galerkin_2d::grid::Element;
 use galerkin_2d::grid::ElementStorage;
 use galerkin_2d::grid::SpatialVariable;
-use galerkin_2d::grid::Vec2;
 use galerkin_2d::unknowns::Unknown;
 use rulinalg::vector::Vector;
 use std::fmt::Debug;

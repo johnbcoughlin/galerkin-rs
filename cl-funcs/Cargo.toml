@@ -1,0 +1,9 @@
+[package]
+name = "cl-funcs"
+version = "0.1.0"
+authors = ["Jack Coughlin <johnbcoughlin@gmail.com>"]
+edition = "2018"
+
+[dependencies]
+ocl = "*"
+mashup = "0.1"

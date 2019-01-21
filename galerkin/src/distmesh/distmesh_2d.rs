@@ -7,22 +7,22 @@ use std::str::FromStr;
 
 pub fn ellipse() -> Mesh {
     parse_distmesh_2d(
-        include_str!("../../static/meshes_2d/ellipse_points"),
-        include_str!("../../static/meshes_2d/ellipse_triangles"),
+        include_str!("../../../static/meshes_2d/ellipse_points"),
+        include_str!("../../../static/meshes_2d/ellipse_triangles"),
     )
 }
 
 pub fn unit_square() -> Mesh {
     parse_distmesh_2d(
-        include_str!("../../static/meshes_2d/unit_square_points"),
-        include_str!("../../static/meshes_2d/unit_square_triangles"),
+        include_str!("../../../static/meshes_2d/unit_square_points"),
+        include_str!("../../../static/meshes_2d/unit_square_triangles"),
     )
 }
 
 pub fn isentropic_vortex() -> Mesh {
     parse_distmesh_2d(
-        include_str!("../../static/meshes_2d/isentropic_vortex_points"),
-        include_str!("../../static/meshes_2d/isentropic_vortex_triangles"),
+        include_str!("../../../static/meshes_2d/isentropic_vortex_points"),
+        include_str!("../../../static/meshes_2d/isentropic_vortex_triangles"),
     )
 }
 
