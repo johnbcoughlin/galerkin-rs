@@ -1,6 +1,7 @@
 #![feature(test)]
 #[macro_use]
 extern crate galerkin;
+#[macro_use]
 extern crate rulinalg;
 
 use flux::*;
