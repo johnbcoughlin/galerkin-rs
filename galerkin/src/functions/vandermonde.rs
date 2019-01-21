@@ -2,7 +2,7 @@ extern crate rulinalg;
 
 use self::rulinalg::matrix::Matrix;
 use self::rulinalg::vector::Vector;
-use functions::jacobi_polynomials::{
+use crate::functions::jacobi_polynomials::{
     grad_jacobi, grad_simplex_2d_polynomials, jacobi, simplex_2d_polynomial,
 };
 use rulinalg::matrix::BaseMatrixMut;
@@ -80,8 +80,10 @@ pub fn grad_vandermonde_2d(n: i32, a: &Vector<f64>, b: &Vector<f64>) -> (Matrix<
 
 #[cfg(test)]
 mod tests {
-    use functions::jacobi_polynomials::grad_legendre_roots;
-    use functions::vandermonde::{grad_vandermonde, vandermonde, grad_vandermonde_2d, vandermonde_2d};
+    use crate::functions::jacobi_polynomials::grad_legendre_roots;
+    use crate::functions::vandermonde::{
+        grad_vandermonde, grad_vandermonde_2d, vandermonde, vandermonde_2d,
+    };
     use std::ops::Index;
 
     #[test]

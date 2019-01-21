@@ -1,9 +1,9 @@
 extern crate galerkin;
 extern crate rulinalg;
 
+use crate::unknowns::*;
 use galerkin::galerkin_2d::flux::*;
 use rulinalg::vector::Vector;
-use unknowns::*;
 
 #[derive(Debug, Copy, Clone)]
 pub enum EulerFluxType {

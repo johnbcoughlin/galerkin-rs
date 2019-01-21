@@ -1,18 +1,18 @@
-extern crate rulinalg;
 extern crate itertools;
+extern crate rulinalg;
 
-use distmesh::mesh::{Mesh, Triangle};
-use galerkin_2d::flux::FluxScheme;
-use galerkin_2d::galerkin::GalerkinScheme;
-use galerkin_2d::operators::Operators;
-use galerkin_2d::reference_element::ReferenceElement;
-use galerkin_2d::unknowns::Unknown;
+use crate::distmesh::mesh::Point2D;
+use crate::distmesh::mesh::{Mesh, Triangle};
+use crate::galerkin_2d::flux::FluxScheme;
+use crate::galerkin_2d::galerkin::GalerkinScheme;
+use crate::galerkin_2d::operators::Operators;
+use crate::galerkin_2d::reference_element::ReferenceElement;
+use crate::galerkin_2d::unknowns::Unknown;
 use rulinalg::vector::Vector;
 use std::cell::RefCell;
 use std::collections::HashMap;
 use std::fmt;
 use std::fmt::Debug;
-use distmesh::mesh::Point2D;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum FaceNumber {
@@ -22,9 +22,9 @@ pub enum FaceNumber {
 }
 
 pub enum FaceType<'grid, GS: GalerkinScheme>
-    where
-        <GS::U as Unknown>::Line: 'grid,
-        <GS::FS as FluxScheme<GS::U>>::F: 'grid,
+where
+    <GS::U as Unknown>::Line: 'grid,
+    <GS::FS as FluxScheme<GS::U>>::F: 'grid,
 {
     // An interior face with the index of the element on the other side.
     Interior(i32, FaceNumber),
@@ -50,9 +50,9 @@ impl<'grid, GS: GalerkinScheme> Debug for FaceType<'grid, GS> {
 
 #[derive(Debug)]
 pub struct Face<'grid, GS: GalerkinScheme>
-    where
-        <GS::U as Unknown>::Line: 'grid,
-        <GS::FS as FluxScheme<GS::U>>::F: 'grid,
+where
+    <GS::U as Unknown>::Line: 'grid,
+    <GS::FS as FluxScheme<GS::U>>::F: 'grid,
 {
     pub face_type: FaceType<'grid, GS>,
     pub flux_key: <GS::FS as FluxScheme<GS::U>>::K,
@@ -85,9 +85,9 @@ pub struct LocalMetric {
 
 #[derive(Debug)]
 pub struct Element<'grid, GS: GalerkinScheme>
-    where
-        <GS::U as Unknown>::Line: 'grid,
-        <GS::FS as FluxScheme<GS::U>>::F: 'grid,
+where
+    <GS::U as Unknown>::Line: 'grid,
+    <GS::FS as FluxScheme<GS::U>>::F: 'grid,
 {
     pub index: i32,
     pub x_k: Vector<f64>,
@@ -129,8 +129,8 @@ impl<'grid, GS: GalerkinScheme> Element<'grid, GS> {
 }
 
 pub struct ElementStorage<GS>
-    where
-        GS: GalerkinScheme,
+where
+    GS: GalerkinScheme,
 {
     pub u_k: GS::U,
 
@@ -152,36 +152,40 @@ pub struct ElementStorage<GS>
 
 #[derive(Debug)]
 pub struct Grid<'grid, GS: GalerkinScheme>
-    where
-        <GS::U as Unknown>::Line: 'grid,
-        <GS::FS as FluxScheme<GS::U>>::F: 'grid,
+where
+    <GS::U as Unknown>::Line: 'grid,
+    <GS::FS as FluxScheme<GS::U>>::F: 'grid,
 {
     pub elements: Vec<Element<'grid, GS>>,
 }
 
 impl<'grid, GS: GalerkinScheme> Grid<'grid, GS>
-    where
-        <GS::U as Unknown>::Line: 'grid,
-        <GS::FS as FluxScheme<GS::U>>::F: 'grid,
+where
+    <GS::U as Unknown>::Line: 'grid,
+    <GS::FS as FluxScheme<GS::U>>::F: 'grid,
 {
     pub fn to_mesh(&self, reference_element: &ReferenceElement) -> Mesh {
         let np = reference_element.ss.size();
         let reference_triangulation = reference_element.to_mesh().triangles;
         println!("{:?}", reference_triangulation);
-        let points: Vec<Point2D> = self.elements.iter()
+        let points: Vec<Point2D> = self
+            .elements
+            .iter()
             .flat_map(|ref elt| elt.x_k.iter().zip(elt.y_k.iter()))
             .map(|(&x, &y)| Point2D { x, y })
             .collect();
 
-        let triangles: Vec<Triangle> = self.elements.iter().enumerate()
-            .flat_map(|(i, ref elt)| {
+        let triangles: Vec<Triangle> = self
+            .elements
+            .iter()
+            .enumerate()
+            .flat_map(|(i, ref _elt)| {
                 let k = (np * i) as i32;
-                reference_triangulation.iter()
-                    .map(move |tri| Triangle {
-                        a: tri.a + k,
-                        b: tri.b + k,
-                        c: tri.c + k
-                    })
+                reference_triangulation.iter().map(move |tri| Triangle {
+                    a: tri.a + k,
+                    b: tri.b + k,
+                    c: tri.c + k,
+                })
             })
             .collect();
 
@@ -220,13 +224,13 @@ pub fn assemble_grid<'grid, GS, F, FExterior, FSP>(
     interior_flux_key: <GS::FS as FluxScheme<GS::U>>::K,
     exterior_flux_key: <GS::FS as FluxScheme<GS::U>>::K,
 ) -> Grid<'grid, GS>
-    where
-        GS: GalerkinScheme,
-        for<'r, 's> F: Fn(f64, &'r Vector<f64>, &'s Vector<f64>) -> <GS::U as Unknown>::Line + 'grid,
-        F: Send + Sync,
-        FExterior: Fn() -> <<GS::FS as FluxScheme<GS::U>>::F as SpatialVariable>::Line,
-        FExterior: Send + Sync,
-        FSP: Fn(&Vector<f64>, &Vector<f64>) -> <GS::FS as FluxScheme<GS::U>>::F,
+where
+    GS: GalerkinScheme,
+    for<'r, 's> F: Fn(f64, &'r Vector<f64>, &'s Vector<f64>) -> <GS::U as Unknown>::Line + 'grid,
+    F: Send + Sync,
+    FExterior: Fn() -> <<GS::FS as FluxScheme<GS::U>>::F as SpatialVariable>::Line,
+    FExterior: Send + Sync,
+    FSP: Fn(&Vector<f64>, &Vector<f64>) -> <GS::FS as FluxScheme<GS::U>>::F,
 {
     let points = &mesh.points;
     let rs = &reference_element.rs;
@@ -258,11 +262,13 @@ pub fn assemble_grid<'grid, GS, F, FExterior, FSP>(
 
         let (e1, e2, e3) = triangle.edges();
         let edge_to_face_type = |e: &Edge| match edges_to_triangle.get(e) {
-            Some(EdgeType::Interior(a, a_number, b, b_number)) => if *a == i as i32 {
-                (FaceType::Interior(*b, *b_number), interior_flux_key)
-            } else {
-                (FaceType::Interior(*a, *a_number), interior_flux_key)
-            },
+            Some(EdgeType::Interior(a, a_number, b, b_number)) => {
+                if *a == i as i32 {
+                    (FaceType::Interior(*b, *b_number), interior_flux_key)
+                } else {
+                    (FaceType::Interior(*a, *a_number), interior_flux_key)
+                }
+            }
             Some(EdgeType::Exterior(_, _)) => (
                 FaceType::Boundary(boundary_condition, exterior_boundary_spatial_parameter),
                 exterior_flux_key,
@@ -328,8 +334,8 @@ fn build_face<'grid, GS>(
     reference_element: &ReferenceElement,
     local_metric: &LocalMetric,
 ) -> Face<'grid, GS>
-    where
-        GS: GalerkinScheme,
+where
+    GS: GalerkinScheme,
 {
     let slice = reference_element.face(face_number).as_slice();
     let x_r_face = local_metric.x_r.select(slice);
@@ -474,8 +480,8 @@ impl SpatialVariable for () {
 #[cfg(test)]
 mod assemble_edges_to_triangle_test {
     use super::{assemble_edges_to_triangle, Edge, EdgeType, FaceNumber::*};
-    use distmesh::mesh::Triangle;
-    use testing::assertions::{Assertion};
+    use crate::distmesh::mesh::Triangle;
+    use crate::testing::assertions::Assertion;
     use std::collections::HashMap;
 
     #[test]

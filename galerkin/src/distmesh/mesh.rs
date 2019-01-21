@@ -93,44 +93,56 @@ mod tests {
     #[test]
     fn test_contains() {
         let triangle = ExpandedTriangle {
-            ax: 0.0, ay: 0.0,
-            bx: 1.0, by: 0.0,
-            cx: 0.0, cy: 1.0,
+            ax: 0.0,
+            ay: 0.0,
+            bx: 1.0,
+            by: 0.0,
+            cx: 0.0,
+            cy: 1.0,
         };
-        assert!(triangle.contains(Point2D {x: 0.2, y: 0.3}, 0.));
-        assert!(!triangle.contains(Point2D {x: 0.9, y: 0.3}, 0.));
+        assert!(triangle.contains(Point2D { x: 0.2, y: 0.3 }, 0.));
+        assert!(!triangle.contains(Point2D { x: 0.9, y: 0.3 }, 0.));
     }
 
     #[test]
     fn test_contains_away_from_origin() {
         let triangle = ExpandedTriangle {
-            ax: 3.0, ay: 5.0,
-            bx: 8.0, by: 5.0,
-            cx: 4.0, cy: 7.0,
+            ax: 3.0,
+            ay: 5.0,
+            bx: 8.0,
+            by: 5.0,
+            cx: 4.0,
+            cy: 7.0,
         };
-        assert!(triangle.contains(Point2D {x: 5.0, y: 5.5}, 0.));
-        assert!(!triangle.contains(Point2D {x: 5.8, y: 6.5}, 0.));
+        assert!(triangle.contains(Point2D { x: 5.0, y: 5.5 }, 0.));
+        assert!(!triangle.contains(Point2D { x: 5.8, y: 6.5 }, 0.));
     }
 
     #[test]
     fn test_chirality() {
         let triangle = ExpandedTriangle {
-            ax: 8.0, ay: 5.0,
-            bx: 3.0, by: 5.0,
-            cx: 4.0, cy: 7.0,
+            ax: 8.0,
+            ay: 5.0,
+            bx: 3.0,
+            by: 5.0,
+            cx: 4.0,
+            cy: 7.0,
         };
-        assert!(triangle.contains(Point2D {x: 5.0, y: 5.5}, 0.));
-        assert!(!triangle.contains(Point2D {x: 5.8, y: 6.5}, 0.));
+        assert!(triangle.contains(Point2D { x: 5.0, y: 5.5 }, 0.));
+        assert!(!triangle.contains(Point2D { x: 5.8, y: 6.5 }, 0.));
     }
 
     #[test]
     fn test_contains_tolerance() {
         let triangle = ExpandedTriangle {
-            ax: 0.0, ay: 0.0,
-            bx: 1.0, by: 0.0,
-            cx: 1.0, cy: 1.0,
+            ax: 0.0,
+            ay: 0.0,
+            bx: 1.0,
+            by: 0.0,
+            cx: 1.0,
+            cy: 1.0,
         };
-        assert!(!triangle.contains(Point2D {x: 0.5, y: -0.001}, 0.0));
-        assert!(triangle.contains(Point2D {x: 0.5, y: -0.001}, 0.002));
+        assert!(!triangle.contains(Point2D { x: 0.5, y: -0.001 }, 0.0));
+        assert!(triangle.contains(Point2D { x: 0.5, y: -0.001 }, 0.002));
     }
 }

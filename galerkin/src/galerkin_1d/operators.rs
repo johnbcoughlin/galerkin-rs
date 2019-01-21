@@ -1,7 +1,7 @@
 extern crate rulinalg;
 
-use functions::vandermonde::{grad_vandermonde, vandermonde};
-use galerkin_1d::grid::ReferenceElement;
+use crate::functions::vandermonde::{grad_vandermonde, vandermonde};
+use crate::galerkin_1d::grid::ReferenceElement;
 use rulinalg::matrix::{BaseMatrix, Matrix};
 
 pub struct Operators {

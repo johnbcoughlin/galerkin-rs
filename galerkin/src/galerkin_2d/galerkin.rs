@@ -1,8 +1,8 @@
 extern crate rulinalg;
 
-use galerkin_2d::flux::FluxScheme;
-use galerkin_2d::operators::FaceLiftable;
-use galerkin_2d::unknowns::Unknown;
+use crate::galerkin_2d::flux::FluxScheme;
+use crate::galerkin_2d::operators::FaceLiftable;
+use crate::galerkin_2d::unknowns::Unknown;
 use std::fmt::Debug;
 
 pub trait GalerkinScheme {

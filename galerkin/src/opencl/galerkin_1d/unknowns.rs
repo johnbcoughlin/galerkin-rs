@@ -1,6 +1,6 @@
 extern crate ocl;
 
-use ocl::{OclPrm, Buffer, ProQue};
+use ocl::{Buffer, OclPrm, ProQue};
 use std::iter::repeat;
 
 pub trait Unknown: OclPrm {
@@ -52,19 +52,26 @@ mod tests {
 
     #[test]
     fn test_unknown() {
-        assert_eq!(Q::cl_struct_def(), r#"typedef struct {
+        assert_eq!(
+            Q::cl_struct_def(),
+            r#"typedef struct {
 	float a;
 	float b;
-} cl_Q;"#);
+} cl_Q;"#
+        );
     }
 }
 
 pub fn initialize_residuals<T: OclPrm>(k: usize, n_p: i32, pro_que: &ProQue) -> Vec<Buffer<T>> {
     repeat(repeat(T::default()).take(n_p as usize).collect())
         .take(k)
-        .map(|v: Vec<T>| pro_que.buffer_builder()
-            .len(v.len())
-            .copy_host_slice(v.as_slice())
-            .build().unwrap())
+        .map(|v: Vec<T>| {
+            pro_que
+                .buffer_builder()
+                .len(v.len())
+                .copy_host_slice(v.as_slice())
+                .build()
+                .unwrap()
+        })
         .collect()
 }

@@ -1,8 +1,8 @@
-use galerkin_2d::galerkin::GalerkinScheme;
-use galerkin_2d::grid::Element;
-use galerkin_2d::grid::ElementStorage;
-use galerkin_2d::grid::SpatialVariable;
-use galerkin_2d::unknowns::Unknown;
+use crate::galerkin_2d::galerkin::GalerkinScheme;
+use crate::galerkin_2d::grid::Element;
+use crate::galerkin_2d::grid::ElementStorage;
+use crate::galerkin_2d::grid::SpatialVariable;
+use crate::galerkin_2d::unknowns::Unknown;
 use rulinalg::vector::Vector;
 use std::fmt::Debug;
 use std::ops::Deref;

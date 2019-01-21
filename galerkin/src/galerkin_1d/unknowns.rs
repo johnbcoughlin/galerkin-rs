@@ -3,11 +3,11 @@ extern crate rulinalg;
 
 use self::core::ops::{Add, Div, Mul, Neg};
 use self::rulinalg::vector::Vector;
-use galerkin_1d::galerkin::GalerkinScheme;
-use galerkin_1d::grid;
-use galerkin_1d::grid::ElementStorage;
-use galerkin_1d::grid::SpatialFlux;
-use galerkin_1d::operators::Operators;
+use crate::galerkin_1d::galerkin::GalerkinScheme;
+use crate::galerkin_1d::grid;
+use crate::galerkin_1d::grid::ElementStorage;
+use crate::galerkin_1d::grid::SpatialFlux;
+use crate::galerkin_1d::operators::Operators;
 use std::cell::Cell;
 use std::fmt;
 

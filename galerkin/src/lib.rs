@@ -16,5 +16,5 @@ pub mod distmesh;
 pub mod functions;
 pub mod galerkin_1d;
 pub mod galerkin_2d;
-pub mod plot;
 pub mod opencl;
+pub mod plot;

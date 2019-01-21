@@ -289,8 +289,9 @@ fn maxwell_1d<Fx>(
     let mut residuals: Vec<(Vector<f64>, Vector<f64>)> = repeat((
         Vector::zeros(reference_element.n_p as usize + 1),
         Vector::zeros(reference_element.n_p as usize + 1),
-    )).take(grid.elements.len())
-        .collect();
+    ))
+    .take(grid.elements.len())
+    .collect();
 
     for epoch in 0..n_t {
         for int_rk in 0..5 {

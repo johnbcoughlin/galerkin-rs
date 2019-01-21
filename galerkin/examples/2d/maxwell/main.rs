@@ -7,7 +7,8 @@ extern crate test;
 mod flux;
 mod unknowns;
 
-use flux::*;
+use crate::flux::*;
+use crate::unknowns::*;
 use galerkin::blas::*;
 use galerkin::distmesh::distmesh_2d::unit_square;
 use galerkin::functions::range_kutta::RKA;
@@ -27,7 +28,6 @@ use galerkin::plot::plot3d::{GnuplotPlotter3D, Plotter3D};
 use rulinalg::vector::Vector;
 use std::f64::consts;
 use std::iter::repeat_with;
-use unknowns::*;
 
 fn main() {
     maxwell_2d_example(true, 10.0);
@@ -155,7 +155,8 @@ pub fn maxwell_2d_example(plot: bool, final_time: f64) {
     let reference_element = ReferenceElement::legendre(n_p);
     let operators = assemble_operators(&reference_element);
     let mesh = unit_square();
-    let boundary_condition = |_t: f64, _x: &Vector<f64>, _y: &Vector<f64>| EH::face1_zero(&reference_element);
+    let boundary_condition =
+        |_t: f64, _x: &Vector<f64>, _y: &Vector<f64>| EH::face1_zero(&reference_element);
     let grid: Grid<Maxwell2D> = assemble_grid(
         &reference_element,
         &operators,
@@ -215,7 +216,8 @@ mod tests {
         let reference_element = ReferenceElement::legendre(n_p);
         let operators = assemble_operators(&reference_element);
         let mesh = unit_square();
-        let boundary_condition = |_t: f64, _x: &Vector<f64>, _y: &Vector<f64>| EH::face1_zero(&reference_element);
+        let boundary_condition =
+            |_t: f64, _x: &Vector<f64>, _y: &Vector<f64>| EH::face1_zero(&reference_element);
         let grid: Grid<Maxwell2D> = assemble_grid(
             &reference_element,
             &operators,

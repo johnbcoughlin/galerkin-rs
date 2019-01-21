@@ -1,6 +1,6 @@
-use distmesh::mesh::Mesh;
-use distmesh::mesh::Point2D;
-use distmesh::mesh::Triangle;
+use crate::distmesh::mesh::Mesh;
+use crate::distmesh::mesh::Point2D;
+use crate::distmesh::mesh::Triangle;
 use std::num::ParseFloatError;
 use std::num::ParseIntError;
 use std::str::FromStr;

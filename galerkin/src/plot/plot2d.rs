@@ -46,7 +46,8 @@ impl Plotter2D {
             stdin,
             "plot \"{}\" using 1:2 with lines",
             self.path.to_str().unwrap()
-        ).unwrap();
+        )
+        .unwrap();
     }
 
     pub fn header(&mut self) {

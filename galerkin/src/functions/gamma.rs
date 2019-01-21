@@ -58,7 +58,7 @@ pub trait GammaFn {
 #[cfg(test)]
 mod tests {
     use super::num::complex::Complex64;
-    use functions::gamma::gamma;
+    use crate::functions::gamma::gamma;
     use std::f64::consts;
 
     #[test]

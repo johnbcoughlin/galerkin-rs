@@ -1,11 +1,11 @@
 extern crate rulinalg;
 
 use self::rulinalg::vector::Vector;
-use functions::jacobi_polynomials::grad_legendre_roots;
-use galerkin_1d::flux::FluxEnum;
-use galerkin_1d::flux::FluxScheme;
-use galerkin_1d::galerkin::GalerkinScheme;
-use galerkin_1d::unknowns::Unknown;
+use crate::functions::jacobi_polynomials::grad_legendre_roots;
+use crate::galerkin_1d::flux::FluxEnum;
+use crate::galerkin_1d::flux::FluxScheme;
+use crate::galerkin_1d::galerkin::GalerkinScheme;
+use crate::galerkin_1d::unknowns::Unknown;
 use std::cell::Cell;
 use std::fmt;
 
@@ -87,8 +87,10 @@ pub enum FaceType<GS: GalerkinScheme> {
     // and the time parameter
     Boundary(
         Box<
-            Fn(f64, <<GS as GalerkinScheme>::U as Unknown>::Unit)
-                -> <<GS as GalerkinScheme>::U as Unknown>::Unit,
+            Fn(
+                f64,
+                <<GS as GalerkinScheme>::U as Unknown>::Unit,
+            ) -> <<GS as GalerkinScheme>::U as Unknown>::Unit,
         >,
         <<GS as GalerkinScheme>::F as SpatialFlux>::Unit,
     ),

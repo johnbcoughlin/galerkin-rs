@@ -1,13 +1,13 @@
 extern crate itertools;
 extern crate rulinalg;
 
-use blas;
-use functions::vandermonde::{grad_vandermonde_2d, vandermonde, vandermonde_2d};
-use galerkin_2d::grid::LocalMetric;
-use galerkin_2d::grid::XYTuple;
-use galerkin_2d::reference_element::ReferenceElement;
-use galerkin_2d::unknowns::Unknown;
-use rulinalg::matrix::{Matrix, BaseMatrix, BaseMatrixMut};
+use crate::blas;
+use crate::functions::vandermonde::{grad_vandermonde_2d, vandermonde, vandermonde_2d};
+use crate::galerkin_2d::grid::LocalMetric;
+use crate::galerkin_2d::grid::XYTuple;
+use crate::galerkin_2d::reference_element::ReferenceElement;
+use crate::galerkin_2d::unknowns::Unknown;
+use rulinalg::matrix::{BaseMatrix, BaseMatrixMut, Matrix};
 use rulinalg::vector::Vector;
 use std::fmt;
 
@@ -126,7 +126,7 @@ fn assemble_lift(reference_element: &ReferenceElement, v2d: &Matrix<f64>) -> Fac
     // same way along the diagonal edge.
     let face2_r: Vector<f64> = rs.select(&reference_element.face2.as_slice());
     let v = vandermonde(&face2_r, n);
-    let mass_face2 = (&v * &v.transpose()).inverse().expect("non-invertible");
+    let _mass_face2 = (&v * &v.transpose()).inverse().expect("non-invertible");
     &reference_element
         .face2
         .iter()
@@ -143,7 +143,7 @@ fn assemble_lift(reference_element: &ReferenceElement, v2d: &Matrix<f64>) -> Fac
     let mut face3: Matrix<f64> = Matrix::zeros(n_p as usize, n_fp as usize);
     let face3_s: Vector<f64> = ss.select(&reference_element.face3.as_slice());
     let v = vandermonde(&face3_s, n_p);
-    let mass_face3 = (&v * &v.transpose()).inverse().expect("non-invertible");
+    let _mass_face3 = (&v * &v.transpose()).inverse().expect("non-invertible");
     &reference_element
         .face3
         .iter()
@@ -164,14 +164,10 @@ fn assemble_lift(reference_element: &ReferenceElement, v2d: &Matrix<f64>) -> Fac
     }
 }
 
-pub fn cutoff_filter(
-    operators: &Operators,
-    n: i32,
-    frac: f64,
-) -> Matrix<f64> {
-    let n_p = (n + 1) * (n + 2) / 2;
+pub fn cutoff_filter(operators: &Operators, n: i32, frac: f64) -> Matrix<f64> {
+    let _n_p = (n + 1) * (n + 2) / 2;
     let mut array = [1.; 55];
-    let mut sk: usize = 0;
+    let sk: usize = 0;
     for i in 0..n + 1 {
         for j in 0..n {
             if i + j > n {
@@ -180,8 +176,13 @@ pub fn cutoff_filter(
         }
     }
     let diag = Matrix::from_diag(&array);
-    &operators.v * &(diag * &operators.v.clone().inverse()
-        .expect("non-invertible Vandermonde matrix"))
+    &operators.v
+        * &(diag
+            * &operators
+                .v
+                .clone()
+                .inverse()
+                .expect("non-invertible Vandermonde matrix"))
 }
 
 pub fn grad(
@@ -239,7 +240,7 @@ pub fn curl_2d(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use galerkin_2d::reference_element::*;
+    use crate::galerkin_2d::reference_element::*;
 
     #[test]
     fn computes_vandermonde_matrix() {

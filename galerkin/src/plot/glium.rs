@@ -1,11 +1,11 @@
 extern crate glium;
 extern crate rand;
 
-use std::thread;
+use crate::distmesh::mesh::{Mesh, Point2D};
 use glium::{glutin, Surface};
-use distmesh::mesh::{Mesh, Point2D};
-use std::sync::mpsc::{self, Sender};
 use std::f32;
+use std::sync::mpsc::{self, Sender};
+use std::thread;
 
 pub struct OpenGLPlot {
     mesh: Mesh,
@@ -18,71 +18,91 @@ pub struct OpenGLPlot {
 
 impl OpenGLPlot {
     pub fn new(mesh: Mesh, display: glium::Display, program: glium::Program) -> OpenGLPlot {
-        let vertices: Vec<Vertex> = mesh.points.iter()
-            .map(|&p| Vertex::from_point(p))
-            .collect();
+        let vertices: Vec<Vertex> = mesh.points.iter().map(|&p| Vertex::from_point(p)).collect();
         let matrix = viewport_transform_matrix(&mesh);
         let vertex_buffer = glium::VertexBuffer::new(&display, &vertices).unwrap();
-        let indices: Vec<u32> = mesh.triangles.iter()
+        let indices: Vec<u32> = mesh
+            .triangles
+            .iter()
             .flat_map(|tri| vec![tri.a as u32, tri.b as u32, tri.c as u32].into_iter())
             .collect();
-        let index_buffer = glium::index::IndexBuffer::new(&display,
-                                                          glium::index::PrimitiveType::TrianglesList,
-                                                          &indices)
-            .expect("could not create index buffer");
-        OpenGLPlot { mesh, display, program, indices: index_buffer, vertices: vertex_buffer, matrix }
+        let index_buffer = glium::index::IndexBuffer::new(
+            &display,
+            glium::index::PrimitiveType::TrianglesList,
+            &indices,
+        )
+        .expect("could not create index buffer");
+        OpenGLPlot {
+            mesh,
+            display,
+            program,
+            indices: index_buffer,
+            vertices: vertex_buffer,
+            matrix,
+        }
     }
 
     pub fn plot(&self, vertex_values: Vec<f64>) {
         let mut target = self.display.draw();
-        let value_buffer = glium::VertexBuffer::new(&self.display, &vertex_values.iter()
-            .map(|&x| Unknown { value: [x as f32, 0.0_f32] })
-            .collect::<Vec<Unknown>>()).unwrap();
+        let value_buffer = glium::VertexBuffer::new(
+            &self.display,
+            &vertex_values
+                .iter()
+                .map(|&x| Unknown {
+                    value: [x as f32, 0.0_f32],
+                })
+                .collect::<Vec<Unknown>>(),
+        )
+        .unwrap();
         let uniforms = uniform! {
             matrix: self.matrix,
             colorTransform: color_transform_matrix(&vertex_values),
         };
-        target.draw(
-            (&self.vertices, &value_buffer),
-            &self.indices,
-            &self.program,
-            &uniforms,
-            &Default::default(),
-        ).unwrap();
+        target
+            .draw(
+                (&self.vertices, &value_buffer),
+                &self.indices,
+                &self.program,
+                &uniforms,
+                &Default::default(),
+            )
+            .unwrap();
         target.finish().unwrap();
     }
 }
 
 fn viewport_transform_matrix(mesh: &Mesh) -> [[f32; 4]; 4] {
-    let (xmin, xmax, ymin, ymax) = mesh.points.iter()
-        .fold(
-            (f32::MAX, f32::MIN, f32::MAX, f32::MIN),
-            |(xmin, xmax, ymin, ymax), point: &Point2D| {
-                (
-                    xmin.min(point.x as f32),
-                    xmax.max(point.x as f32),
-                    ymin.min(point.y as f32),
-                    ymax.max(point.y as f32)
-                )
-            });
+    let (xmin, xmax, ymin, ymax) = mesh.points.iter().fold(
+        (f32::MAX, f32::MIN, f32::MAX, f32::MIN),
+        |(xmin, xmax, ymin, ymax), point: &Point2D| {
+            (
+                xmin.min(point.x as f32),
+                xmax.max(point.x as f32),
+                ymin.min(point.y as f32),
+                ymax.max(point.y as f32),
+            )
+        },
+    );
     // 2(xmax) / (xmax - xmin) - (xmax + xmin) / (xmax - xmin) = xmax - xmin / xmax - xmin = 1.
     let result = [
         [2. / (xmax - xmin), 0., 0., 0.],
         [0., 2. / (ymax - ymin), 0., 0.],
         [0., 0., 1., 0.],
-        [-(xmax + xmin) / (xmax - xmin), -(ymax + ymin) / (ymax - ymin), 0., 1.]
+        [
+            -(xmax + xmin) / (xmax - xmin),
+            -(ymax + ymin) / (ymax - ymin),
+            0.,
+            1.,
+        ],
     ];
     result
 }
 
 fn color_transform_matrix(values: &Vec<f64>) -> [[f32; 4]; 4] {
-    let (min, max) = values.iter().fold(
-        (f32::MAX, f32::MIN),
-        |(min, max): (f32, f32), &val| {
-            (
-                min.min(val as f32),
-                max.max(val as f32)
-            )
+    let (min, max) = values
+        .iter()
+        .fold((f32::MAX, f32::MIN), |(min, max): (f32, f32), &val| {
+            (min.min(val as f32), max.max(val as f32))
         });
     [
         [1. / (max - min), 0., 0., 0.],
@@ -93,8 +113,8 @@ fn color_transform_matrix(values: &Vec<f64>) -> [[f32; 4]; 4] {
 }
 
 pub fn run_inside_plot<F>(mesh: Mesh, f: F)
-    where
-        F: Fn(Sender<Vec<f64>>) -> () + Send + Sync + 'static,
+where
+    F: Fn(Sender<Vec<f64>>) -> () + Send + Sync + 'static,
 {
     let mut events_loop = glutin::EventsLoop::new();
     let window = glutin::WindowBuilder::new();
@@ -110,7 +130,8 @@ pub fn run_inside_plot<F>(mesh: Mesh, f: F)
             tessellation_control_shader: None,
             tessellation_evaluation_shader: None,
         },
-    ).unwrap();
+    )
+    .unwrap();
 
     let plot = OpenGLPlot::new(mesh, display, program);
 
@@ -127,14 +148,12 @@ pub fn run_inside_plot<F>(mesh: Mesh, f: F)
         plot.plot(values);
 
         // maybe close the window
-        events_loop.poll_events(|ev| {
-            match ev {
-                glutin::Event::WindowEvent { event, .. } => match event {
-                    glutin::WindowEvent::CloseRequested => closed = true,
-                    _ => (),
-                },
+        events_loop.poll_events(|ev| match ev {
+            glutin::Event::WindowEvent { event, .. } => match event {
+                glutin::WindowEvent::CloseRequested => closed = true,
                 _ => (),
-            }
+            },
+            _ => (),
         });
     }
 }
@@ -155,7 +174,9 @@ implement_vertex!(Unknown, value);
 
 impl Vertex {
     fn from_point(point: Point2D) -> Vertex {
-        Vertex { position: [point.x as f32, point.y as f32] }
+        Vertex {
+            position: [point.x as f32, point.y as f32],
+        }
     }
 }
 

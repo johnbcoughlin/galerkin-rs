@@ -1,8 +1,8 @@
 extern crate rulinalg;
 
-use galerkin_2d::galerkin::GalerkinScheme;
-use galerkin_2d::grid::{ElementStorage, FaceNumber, FaceType, Grid, SpatialVariable};
-use galerkin_2d::reference_element::ReferenceElement;
+use crate::galerkin_2d::galerkin::GalerkinScheme;
+use crate::galerkin_2d::grid::{ElementStorage, FaceNumber, FaceType, Grid, SpatialVariable};
+use crate::galerkin_2d::reference_element::ReferenceElement;
 use rulinalg::vector::Vector;
 use std::cell::RefCell;
 use std::fmt;
@@ -41,7 +41,7 @@ where
 
     fn face_flipped(&self, number: FaceNumber, reference_element: &ReferenceElement) -> Self::Line {
         let mut slice = reference_element.face(number).clone();
-        let mut slice = slice.as_mut_slice();
+        let slice = slice.as_mut_slice();
         slice.reverse();
         self.slice(slice)
     }
@@ -128,7 +128,10 @@ pub fn communicate<GS>(
             FaceType::Interior(j, face_number) => {
                 let u_k_neighbor: &GS::U = &storages[j as usize].u_k;
                 // minus is interior, plus is neighbor
-                (face1, u_k_neighbor.face_flipped(face_number, reference_element))
+                (
+                    face1,
+                    u_k_neighbor.face_flipped(face_number, reference_element),
+                )
             }
             FaceType::Boundary(bc, _) => {
                 // minus is interior, plus is neighbor
@@ -150,16 +153,19 @@ pub fn communicate<GS>(
             FaceType::Interior(j, face_number) => {
                 let u_k_neighbor: &GS::U = &storages[j as usize].u_k;
                 // minus is interior, plus is neighbor
-                (face2, u_k_neighbor.face_flipped(face_number, reference_element))
+                (
+                    face2,
+                    u_k_neighbor.face_flipped(face_number, reference_element),
+                )
             }
             FaceType::Boundary(bc, _) => {
                 // minus is interior, plus is neighbor
                 (
                     face2,
                     bc(
-                       t,
-                       &elt.face_x(FaceNumber::Two, reference_element),
-                       &elt.face_y(FaceNumber::Two, reference_element),
+                        t,
+                        &elt.face_x(FaceNumber::Two, reference_element),
+                        &elt.face_y(FaceNumber::Two, reference_element),
                     ),
                 )
             }
@@ -172,7 +178,10 @@ pub fn communicate<GS>(
             FaceType::Interior(j, face_number) => {
                 let u_k_neighbor: &GS::U = &storages[j as usize].u_k;
                 // minus is interior, plus is neighbor
-                (face3, u_k_neighbor.face_flipped(face_number, reference_element))
+                (
+                    face3,
+                    u_k_neighbor.face_flipped(face_number, reference_element),
+                )
             }
             FaceType::Boundary(bc, _) => {
                 // minus is interior, plus is neighbor

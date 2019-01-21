@@ -1,12 +1,12 @@
 extern crate galerkin;
 extern crate rulinalg;
 
+use crate::unknowns::EH;
 use galerkin::blas;
 use galerkin::galerkin_2d::flux::{FluxKey, FluxScheme, Side};
 use galerkin::galerkin_2d::grid::SpatialVariable;
 use galerkin::galerkin_2d::reference_element::ReferenceElement;
 use rulinalg::vector::Vector;
-use unknowns::EH;
 
 #[derive(Debug, Clone, Copy)]
 pub struct Null();

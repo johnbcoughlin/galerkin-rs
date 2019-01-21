@@ -35,7 +35,7 @@ impl GnuplotPlotter3D {
         z_min: f64,
         z_max: f64,
     ) {
-        let mut stdin = (&mut self.gnuplot.stdin).as_mut().expect("No stdin");
+        let stdin = (&mut self.gnuplot.stdin).as_mut().expect("No stdin");
         writeln!(stdin, "set xrange [{}:{}]", x_min, x_max).unwrap();
         writeln!(stdin, "set yrange [{}:{}]", y_min, y_max).unwrap();
         writeln!(stdin, "set zrange [{}:{}]", z_min, z_max).unwrap();
@@ -45,7 +45,8 @@ impl GnuplotPlotter3D {
             stdin,
             "splot \"{}\" u 1:2:3 with lines",
             self.path.to_str().unwrap()
-        ).unwrap();
+        )
+        .unwrap();
     }
 }
 

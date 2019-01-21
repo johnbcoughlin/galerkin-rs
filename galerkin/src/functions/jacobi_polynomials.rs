@@ -10,7 +10,7 @@ extern crate rulinalg;
 use self::lapack::*;
 use self::num::traits::real::Real;
 use self::rulinalg::vector::Vector;
-use functions::gamma::GammaFn;
+use crate::functions::gamma::GammaFn;
 
 pub fn jacobi(xs: &Vector<f64>, alpha: i32, beta: i32, n: i32) -> Vector<f64> {
     let alphaf = alpha as f64;
@@ -20,7 +20,8 @@ pub fn jacobi(xs: &Vector<f64>, alpha: i32, beta: i32, n: i32) -> Vector<f64> {
     // See NUDG p. 446
     let gamma_0 = 2.0.powi(alpha + beta + 1) / (alphaf + betaf + 1.)
         * (alphaf + 1.).gamma()
-        * (betaf + 1.).gamma() / (alphaf + betaf + 1.).gamma();
+        * (betaf + 1.).gamma()
+        / (alphaf + betaf + 1.).gamma();
     let p_0 = Vector::ones(xs.size()) * (1.0 / gamma_0.sqrt());
     if n == 0 {
         return p_0;
@@ -185,7 +186,7 @@ pub fn grad_simplex_2d_polynomials(
 mod tests {
     extern crate rulinalg;
 
-    use functions::jacobi_polynomials::{
+    use crate::functions::jacobi_polynomials::{
         grad_jacobi, grad_legendre_roots, grad_simplex_2d_polynomials, jacobi,
     };
 
