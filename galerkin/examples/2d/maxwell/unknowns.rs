@@ -1,14 +1,16 @@
 extern crate galerkin;
 extern crate rulinalg;
 
+use std::fmt;
+use std::ops::{Add, Div, Mul, Neg, Sub};
+
+use rulinalg::vector::Vector;
+
 use galerkin::blas::matrix_multiply;
 use galerkin::galerkin_2d::operators::FaceLift;
 use galerkin::galerkin_2d::operators::FaceLiftable;
 use galerkin::galerkin_2d::reference_element::ReferenceElement;
 use galerkin::galerkin_2d::unknowns::Unknown;
-use rulinalg::vector::Vector;
-use std::fmt;
-use std::ops::{Add, Div, Mul, Neg, Sub};
 
 unknown_from_vector_fields!(EH, Ez, Hx, Hy);
 

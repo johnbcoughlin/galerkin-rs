@@ -4,14 +4,18 @@ extern crate galerkin;
 #[macro_use]
 extern crate rulinalg;
 
-use crate::flux::*;
-use crate::unknowns::*;
+use std::f64::consts;
+use std::iter::repeat_with;
+use std::sync::mpsc::Sender;
+
+use rulinalg::vector::Vector;
+
 use galerkin::distmesh::distmesh_2d;
 use galerkin::functions::range_kutta::*;
 use galerkin::galerkin_2d::flux::compute_flux;
 use galerkin::galerkin_2d::galerkin::GalerkinScheme;
-use galerkin::galerkin_2d::grid::FaceNumber;
 use galerkin::galerkin_2d::grid::{assemble_grid, Element, ElementStorage, Grid};
+use galerkin::galerkin_2d::grid::FaceNumber;
 use galerkin::galerkin_2d::operators::{
     assemble_operators, cutoff_filter, FaceLiftable, Operators,
 };
@@ -20,10 +24,9 @@ use galerkin::galerkin_2d::unknowns::communicate;
 use galerkin::galerkin_2d::unknowns::initialize_storage;
 use galerkin::galerkin_2d::unknowns::Unknown;
 use galerkin::plot::glium::run_inside_plot;
-use rulinalg::vector::Vector;
-use std::f64::consts;
-use std::iter::repeat_with;
-use std::sync::mpsc::Sender;
+
+use crate::flux::*;
+use crate::unknowns::*;
 
 mod flux;
 mod unknowns;
@@ -226,8 +229,9 @@ impl GalerkinScheme for Euler2D {
 mod tests {
     extern crate rulinalg;
 
-    use super::*;
     use rulinalg::vector::Vector;
+
+    use super::*;
 
     #[test]
     fn test_isentropic_vortex_t0() {

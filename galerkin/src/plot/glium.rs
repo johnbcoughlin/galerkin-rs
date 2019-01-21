@@ -1,11 +1,13 @@
 extern crate glium;
 extern crate rand;
 
-use crate::distmesh::mesh::{Mesh, Point2D};
-use glium::{glutin, Surface};
 use std::f32;
 use std::sync::mpsc::{self, Sender};
 use std::thread;
+
+use glium::{glutin, Surface};
+
+use crate::distmesh::mesh::{Mesh, Point2D};
 
 pub struct OpenGLPlot {
     mesh: Mesh,

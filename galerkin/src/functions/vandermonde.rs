@@ -1,11 +1,13 @@
 extern crate rulinalg;
 
-use self::rulinalg::matrix::Matrix;
-use self::rulinalg::vector::Vector;
+use rulinalg::matrix::BaseMatrixMut;
+
 use crate::functions::jacobi_polynomials::{
     grad_jacobi, grad_simplex_2d_polynomials, jacobi, simplex_2d_polynomial,
 };
-use rulinalg::matrix::BaseMatrixMut;
+
+use self::rulinalg::matrix::Matrix;
+use self::rulinalg::vector::Vector;
 
 pub fn vandermonde(rs: &Vector<f64>, n: i32) -> Matrix<f64> {
     let mut v = Matrix::zeros(rs.size(), (n + 1) as usize);
@@ -80,11 +82,12 @@ pub fn grad_vandermonde_2d(n: i32, a: &Vector<f64>, b: &Vector<f64>) -> (Matrix<
 
 #[cfg(test)]
 mod tests {
+    use std::ops::Index;
+
     use crate::functions::jacobi_polynomials::grad_legendre_roots;
     use crate::functions::vandermonde::{
         grad_vandermonde, grad_vandermonde_2d, vandermonde, vandermonde_2d,
     };
-    use std::ops::Index;
 
     #[test]
     fn test_vandermonde() {

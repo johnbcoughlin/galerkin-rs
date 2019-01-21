@@ -1,13 +1,15 @@
 extern crate rulinalg;
 
-use self::rulinalg::vector::Vector;
+use std::cell::Cell;
+use std::fmt;
+
 use crate::functions::jacobi_polynomials::grad_legendre_roots;
 use crate::galerkin_1d::flux::FluxEnum;
 use crate::galerkin_1d::flux::FluxScheme;
 use crate::galerkin_1d::galerkin::GalerkinScheme;
 use crate::galerkin_1d::unknowns::Unknown;
-use std::cell::Cell;
-use std::fmt;
+
+use self::rulinalg::vector::Vector;
 
 pub trait SpatialFlux {
     type Unit: Sized + Copy;

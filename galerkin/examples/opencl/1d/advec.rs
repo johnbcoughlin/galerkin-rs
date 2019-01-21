@@ -1,29 +1,31 @@
-extern crate ocl;
-extern crate rulinalg;
 #[macro_use]
 extern crate galerkin;
+extern crate ocl;
+extern crate rulinalg;
+
+use std::f64::consts;
+use std::fmt::Debug;
+use std::iter::repeat;
+
+use ocl::{Buffer, Context, Program, ProQue};
+use rulinalg::vector::Vector;
 
 use galerkin::functions::range_kutta::*;
 use galerkin::galerkin_1d::grid::ReferenceElement;
 use galerkin::galerkin_1d::operators::{assemble_operators, Operators};
 use galerkin::opencl::galerkin_1d::galerkin::communicate;
+use galerkin::opencl::galerkin_1d::galerkin::GalerkinScheme;
 use galerkin::opencl::galerkin_1d::galerkin::initialize_storage;
 use galerkin::opencl::galerkin_1d::galerkin::prepare_communication_kernels;
-use galerkin::opencl::galerkin_1d::galerkin::GalerkinScheme;
+use galerkin::opencl::galerkin_1d::grid::{Face, FaceType, generate_grid, Grid};
 use galerkin::opencl::galerkin_1d::grid::BoundaryCondition;
 use galerkin::opencl::galerkin_1d::grid::Element;
 use galerkin::opencl::galerkin_1d::grid::ElementStorage;
 use galerkin::opencl::galerkin_1d::grid::SpatialFlux;
-use galerkin::opencl::galerkin_1d::grid::{generate_grid, Face, FaceType, Grid};
-use galerkin::opencl::galerkin_1d::operators::store_operators;
 use galerkin::opencl::galerkin_1d::operators::OperatorsStorage;
+use galerkin::opencl::galerkin_1d::operators::store_operators;
 use galerkin::opencl::galerkin_1d::unknowns::initialize_residuals;
 use galerkin::opencl::galerkin_1d::unknowns::Unknown;
-use ocl::{Buffer, Context, ProQue, Program};
-use rulinalg::vector::Vector;
-use std::f64::consts;
-use std::fmt::Debug;
-use std::iter::repeat;
 
 pub struct F(f32);
 

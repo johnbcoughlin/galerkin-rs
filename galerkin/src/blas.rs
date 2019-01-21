@@ -7,9 +7,10 @@ extern crate lapack_src;
 extern crate openblas_src;
 extern crate rulinalg;
 
-use crate::blas::blas::{daxpy, dgbmv, dgemv, dscal};
 use rulinalg::matrix::{BaseMatrix, Matrix};
 use rulinalg::vector::Vector;
+
+use crate::blas::blas::{daxpy, dgbmv, dgemv, dscal};
 
 pub fn matrix_multiply(a: &Matrix<f64>, x: &Vector<f64>) -> Vector<f64> {
     let m = a.cols() as i32;

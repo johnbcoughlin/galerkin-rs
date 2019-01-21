@@ -1,11 +1,12 @@
 extern crate galerkin;
 extern crate rand;
 
-use galerkin::distmesh::distmesh_2d::*;
-use galerkin::plot::glium::*;
 use std::sync::mpsc::Sender;
 use std::thread;
 use std::time::Duration;
+
+use galerkin::distmesh::distmesh_2d::*;
+use galerkin::plot::glium::*;
 
 fn main() {
     let mesh = ellipse();

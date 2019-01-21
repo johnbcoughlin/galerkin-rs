@@ -1,12 +1,14 @@
 extern crate rulinalg;
 
+use std::clone::Clone;
+
+use ocl::Buffer;
+use rulinalg::vector::Vector;
+
 use crate::galerkin_1d::grid::ReferenceElement;
 use crate::galerkin_1d::operators::Operators;
 use crate::opencl::galerkin_1d::galerkin::GalerkinScheme;
 use crate::opencl::galerkin_1d::unknowns::Unknown;
-use ocl::Buffer;
-use rulinalg::vector::Vector;
-use std::clone::Clone;
 
 pub trait SpatialFlux {
     type Unit: Sized + Copy;

@@ -2,11 +2,11 @@
 #![feature(trace_macros)]
 
 #[macro_use]
-extern crate rulinalg;
-extern crate gnuplot;
-#[macro_use]
 extern crate glium;
+extern crate gnuplot;
 extern crate ocl;
+#[macro_use]
+extern crate rulinalg;
 
 #[macro_use]
 pub mod testing;

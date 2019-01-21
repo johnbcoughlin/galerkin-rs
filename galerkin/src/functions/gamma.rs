@@ -1,7 +1,8 @@
 extern crate num;
 
-use self::num::complex::Complex64;
 use std::f64::consts;
+
+use self::num::complex::Complex64;
 
 const P: [f64; 8] = [
     676.5203681218851,
@@ -57,9 +58,11 @@ pub trait GammaFn {
 
 #[cfg(test)]
 mod tests {
-    use super::num::complex::Complex64;
-    use crate::functions::gamma::gamma;
     use std::f64::consts;
+
+    use crate::functions::gamma::gamma;
+
+    use super::num::complex::Complex64;
 
     #[test]
     fn test_min() {

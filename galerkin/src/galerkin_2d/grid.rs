@@ -1,18 +1,20 @@
 extern crate itertools;
 extern crate rulinalg;
 
-use crate::distmesh::mesh::Point2D;
+use std::cell::RefCell;
+use std::collections::HashMap;
+use std::fmt;
+use std::fmt::Debug;
+
+use rulinalg::vector::Vector;
+
 use crate::distmesh::mesh::{Mesh, Triangle};
+use crate::distmesh::mesh::Point2D;
 use crate::galerkin_2d::flux::FluxScheme;
 use crate::galerkin_2d::galerkin::GalerkinScheme;
 use crate::galerkin_2d::operators::Operators;
 use crate::galerkin_2d::reference_element::ReferenceElement;
 use crate::galerkin_2d::unknowns::Unknown;
-use rulinalg::vector::Vector;
-use std::cell::RefCell;
-use std::collections::HashMap;
-use std::fmt;
-use std::fmt::Debug;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum FaceNumber {
@@ -479,10 +481,12 @@ impl SpatialVariable for () {
 
 #[cfg(test)]
 mod assemble_edges_to_triangle_test {
-    use super::{assemble_edges_to_triangle, Edge, EdgeType, FaceNumber::*};
+    use std::collections::HashMap;
+
     use crate::distmesh::mesh::Triangle;
     use crate::testing::assertions::Assertion;
-    use std::collections::HashMap;
+
+    use super::{assemble_edges_to_triangle, Edge, EdgeType, FaceNumber::*};
 
     #[test]
     fn test_no_triangles() {

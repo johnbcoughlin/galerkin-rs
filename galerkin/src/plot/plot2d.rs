@@ -1,14 +1,15 @@
 extern crate rulinalg;
 extern crate tempfile;
 
-use self::rulinalg::vector::Vector;
-use self::tempfile::tempdir;
 use std::fs::OpenOptions;
 use std::io::Write;
 use std::path::PathBuf;
 use std::process::{Child, Command, Stdio};
 use std::thread;
 use std::time::Duration;
+
+use self::rulinalg::vector::Vector;
+use self::tempfile::tempdir;
 
 pub struct Plotter2D {
     gnuplot: Child,

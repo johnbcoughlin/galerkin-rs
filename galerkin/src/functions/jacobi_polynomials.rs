@@ -7,10 +7,11 @@ extern crate num;
 extern crate openblas_src;
 extern crate rulinalg;
 
+use crate::functions::gamma::GammaFn;
+
 use self::lapack::*;
 use self::num::traits::real::Real;
 use self::rulinalg::vector::Vector;
-use crate::functions::gamma::GammaFn;
 
 pub fn jacobi(xs: &Vector<f64>, alpha: i32, beta: i32, n: i32) -> Vector<f64> {
     let alphaf = alpha as f64;

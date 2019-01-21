@@ -1,9 +1,10 @@
-use crate::distmesh::mesh::Mesh;
-use crate::distmesh::mesh::Point2D;
-use crate::distmesh::mesh::Triangle;
 use std::num::ParseFloatError;
 use std::num::ParseIntError;
 use std::str::FromStr;
+
+use crate::distmesh::mesh::Mesh;
+use crate::distmesh::mesh::Point2D;
+use crate::distmesh::mesh::Triangle;
 
 pub fn ellipse() -> Mesh {
     parse_distmesh_2d(

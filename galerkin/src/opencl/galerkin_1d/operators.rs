@@ -1,10 +1,11 @@
 extern crate ocl;
 extern crate rulinalg;
 
-use crate::galerkin_1d::operators::Operators;
-use ocl::flags::MemFlags;
 use ocl::{Buffer, ProQue};
+use ocl::flags::MemFlags;
 use rulinalg::matrix::BaseMatrix;
+
+use crate::galerkin_1d::operators::Operators;
 
 pub struct OperatorsStorage {
     // The Vandermonde matrix, stored row-major.

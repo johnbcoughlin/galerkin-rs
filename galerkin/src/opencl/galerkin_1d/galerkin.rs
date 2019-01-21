@@ -1,18 +1,18 @@
 extern crate ocl;
 extern crate string_builder;
 
-use crate::opencl::galerkin_1d::grid::Grid;
-use crate::opencl::galerkin_1d::grid::SpatialFlux;
-
-use crate::galerkin_1d::grid::ReferenceElement;
-use crate::galerkin_1d::operators::Operators;
-use crate::opencl::galerkin_1d::grid::BoundaryCondition;
-use crate::opencl::galerkin_1d::grid::Element;
-use crate::opencl::galerkin_1d::grid::{ElementStorage, FaceType};
-use crate::opencl::galerkin_1d::unknowns::Unknown;
 use ocl::Kernel;
 use ocl::ProQue;
 use rulinalg::vector::Vector;
+
+use crate::galerkin_1d::grid::ReferenceElement;
+use crate::galerkin_1d::operators::Operators;
+use crate::opencl::galerkin_1d::grid::{ElementStorage, FaceType};
+use crate::opencl::galerkin_1d::grid::BoundaryCondition;
+use crate::opencl::galerkin_1d::grid::Element;
+use crate::opencl::galerkin_1d::grid::Grid;
+use crate::opencl::galerkin_1d::grid::SpatialFlux;
+use crate::opencl::galerkin_1d::unknowns::Unknown;
 
 pub trait GalerkinScheme {
     type U: Unknown;

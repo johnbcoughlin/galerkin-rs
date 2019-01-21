@@ -1,15 +1,17 @@
 extern crate itertools;
 extern crate rulinalg;
 
+use std::fmt;
+
+use rulinalg::matrix::{BaseMatrix, BaseMatrixMut, Matrix};
+use rulinalg::vector::Vector;
+
 use crate::blas;
 use crate::functions::vandermonde::{grad_vandermonde_2d, vandermonde, vandermonde_2d};
 use crate::galerkin_2d::grid::LocalMetric;
 use crate::galerkin_2d::grid::XYTuple;
 use crate::galerkin_2d::reference_element::ReferenceElement;
 use crate::galerkin_2d::unknowns::Unknown;
-use rulinalg::matrix::{BaseMatrix, BaseMatrixMut, Matrix};
-use rulinalg::vector::Vector;
-use std::fmt;
 
 #[derive(Debug)]
 pub struct Operators {
@@ -239,8 +241,9 @@ pub fn curl_2d(
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use crate::galerkin_2d::reference_element::*;
+
+    use super::*;
 
     #[test]
     fn computes_vandermonde_matrix() {

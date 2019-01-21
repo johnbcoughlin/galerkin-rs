@@ -1,15 +1,17 @@
 extern crate core;
 extern crate rulinalg;
 
-use self::core::ops::{Add, Div, Mul, Neg};
-use self::rulinalg::vector::Vector;
+use std::cell::Cell;
+use std::fmt;
+
 use crate::galerkin_1d::galerkin::GalerkinScheme;
 use crate::galerkin_1d::grid;
 use crate::galerkin_1d::grid::ElementStorage;
 use crate::galerkin_1d::grid::SpatialFlux;
 use crate::galerkin_1d::operators::Operators;
-use std::cell::Cell;
-use std::fmt;
+
+use self::core::ops::{Add, Div, Mul, Neg};
+use self::rulinalg::vector::Vector;
 
 pub trait Unknown {
     type Unit: Neg<Output = Self::Unit>

@@ -1,13 +1,15 @@
 extern crate rulinalg;
 
+use std::cell::RefCell;
+use std::fmt;
+use std::ops::{Add, Div, Mul, Neg};
+use std::ops::Sub;
+
+use rulinalg::vector::Vector;
+
 use crate::galerkin_2d::galerkin::GalerkinScheme;
 use crate::galerkin_2d::grid::{ElementStorage, FaceNumber, FaceType, Grid, SpatialVariable};
 use crate::galerkin_2d::reference_element::ReferenceElement;
-use rulinalg::vector::Vector;
-use std::cell::RefCell;
-use std::fmt;
-use std::ops::Sub;
-use std::ops::{Add, Div, Mul, Neg};
 
 pub trait Unknown
 where

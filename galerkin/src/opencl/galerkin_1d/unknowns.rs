@@ -1,7 +1,8 @@
 extern crate ocl;
 
-use ocl::{Buffer, OclPrm, ProQue};
 use std::iter::repeat;
+
+use ocl::{Buffer, OclPrm, ProQue};
 
 pub trait Unknown: OclPrm {
     fn cl_struct_type() -> String;

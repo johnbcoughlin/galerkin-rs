@@ -1,9 +1,11 @@
 extern crate galerkin;
 extern crate rulinalg;
 
-use crate::unknowns::*;
-use galerkin::galerkin_2d::flux::*;
 use rulinalg::vector::Vector;
+
+use galerkin::galerkin_2d::flux::*;
+
+use crate::unknowns::*;
 
 #[derive(Debug, Copy, Clone)]
 pub enum EulerFluxType {
@@ -68,10 +70,12 @@ mod tests {
     extern crate rulinalg;
     extern crate std;
 
-    use super::super::unknowns::*;
-    use super::*;
-    use rulinalg::vector::Vector;
     use std::f64::consts;
+
+    use rulinalg::vector::Vector;
+
+    use super::*;
+    use super::super::unknowns::*;
 
     #[test]
     fn test_lax_friedrichs() {
